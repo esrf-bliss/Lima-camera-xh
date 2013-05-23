@@ -34,10 +34,10 @@ INCLUDES = -I../include \
 CXXFLAGS += $(INCLUDES) -fPIC -Wall -pthread
 
 
-all: xh.o
+all: Xh.o
 
 
-xh.o: $(xh-objs)
+Xh.o: $(xh-objs)
 	ld -o $@ -r $+
 
 clean:

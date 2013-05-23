@@ -37,11 +37,11 @@ CXXFLAGS = -I../include \
 	       -I../../../third-party/Sps/Include \
 	        -Wall -pthread -g
 
-test-progs = XhTest
+test-progs = xhtest
 
 all: 	$(test-progs)
 
-xhtest:		XhTest.o ../src/xh.o
+xhtest:		XhTest.o ../src/Xh.o
 	$(CXX) $(LDFLAGS) -o $@ $+ $(LDLIBS)
 
 
