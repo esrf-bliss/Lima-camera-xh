@@ -34,7 +34,7 @@
 #include "Debug.h"
 
 using namespace lima;
-using namespace lima::xh;
+using namespace lima::Xh;
 using namespace std;
 
 

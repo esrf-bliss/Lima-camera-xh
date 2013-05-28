@@ -1,7 +1,7 @@
 ############################################################################
 # This file is part of LImA, a Library for Image Acquisition
 #
-# Copyright (C) : 2009-2011
+# Copyright (C) : 2009-2013
 # European Synchrotron Radiation Facility
 # BP 220, Grenoble 38043
 # FRANCE
@@ -36,6 +36,16 @@ CXXFLAGS = -I../include \
 	       -I../../../third-party/Processlib/tasks/include \
 	       -I../../../third-party/Sps/Include \
 	        -Wall -pthread -g
+
+ifneq ($(COMPILE_CONFIG),0)
+CXXFLAGS += -DWITH_CONFIG -I../../third-party/libconfig/lib
+LDLIBS += -L../../../third-party/libconfig/lib/.libs -lconfig
+endif
+
+ifneq ($(COMPILE_SPS),0)
+CXXFLAGS += -DWITH_SPS_IMAGE -I../../third-party/libconfig/lib
+LDLIBS += -L../../../third-party/sps/lib/.libs -lconfig
+endif
 
 test-progs = xhtest
 

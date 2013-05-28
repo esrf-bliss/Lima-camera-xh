@@ -19,35 +19,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 ############################################################################
+from Lima import module_helper
 
-xh-objs := XhCamera.o XhClient.o XhDetInfoCtrlObj.o XhInterface.o XhSyncCtrlObj.o
+mod_path = __path__
+depends_on = 'Core'
+has_dependent = False
 
-SRCS = $(xh-objs:.o=.cpp)
+cleanup_data = module_helper.load_prepare(mod_path, depends_on, has_dependent)
 
+from Lima import Core
 
-INCLUDES = -I../include \
-           -I../../../common/include \
-           -I../../../hardware/include \
-           -I../../common/espia/include \
-	       -I../../../third-party/Processlib/core/include
+cleanup_data = module_helper.load_dep_cleanup(cleanup_data)
 
-CXXFLAGS += $(INCLUDES) -fPIC -Wall -pthread
+from Lima.Xh.limaxh import Xh as _B
+globals().update(_B.__dict__)
 
+module_helper.load_cleanup(cleanup_data)
 
-all: Xh.o
-
-
-Xh.o: $(xh-objs)
-	ld -o $@ -r $+
-
-clean:
-	rm -f xh.o $(xh-objs) *.P
-
-%.o : %.cpp
-	$(COMPILE.cpp) -MD $(CXXFLAGS) -o $@ $<
-	@cp $*.d $*.P; \
-	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-	-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
-	rm -f $*.d
-
--include $(SRCS:.cpp=.P)
+del mod_path, depends_on, has_dependent, cleanup_data
+del module_helper

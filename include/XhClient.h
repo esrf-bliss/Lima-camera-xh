@@ -34,7 +34,7 @@
 using namespace std;
 
 namespace lima {
-namespace xh {
+namespace Xh {
 
 const int RD_BUFF = 1000;	// Read buffer for more efficient recv
 
@@ -96,7 +96,7 @@ private:
 	void error_handler(const string errmsg);
 };
 
-} // namespace xh
+} // namespace Xh
 } // namespace lima
 
 #endif /* XHCLIENT_CPP_ */

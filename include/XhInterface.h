@@ -30,7 +30,7 @@
 #include "HwInterface.h"
 
 namespace lima {
-namespace xh {
+namespace Xh {
 
 class Interface;
 class Camera;
@@ -107,7 +107,6 @@ DEB_CLASS_NAMESPC(DebModCamera, "Interface", "Xh");
 public:
 	Interface(Camera& cam);
 	virtual ~Interface();
-
 	virtual void getCapList(CapList&) const;
 	virtual void reset(ResetLevel reset_level);
 	virtual void prepareAcq();
@@ -124,7 +123,7 @@ private:
 	SyncCtrlObj m_sync;
 };
 
-} // namespace xh
+} // namespace Xh
 } // namespace lima
 
 #endif /* XHINTERFACE_H_ */

@@ -59,7 +59,7 @@ const char QUIT[] = "quit\n";		// sent using 'send'
 
 using namespace std;
 using namespace lima;
-using namespace lima::xh;
+using namespace lima::Xh;
 
 XhClient::XhClient() : m_debugMessages() {
 	DEB_CONSTRUCTOR();

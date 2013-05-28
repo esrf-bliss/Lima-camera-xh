@@ -28,7 +28,7 @@
 #include "XhCamera.h"
 
 using namespace lima;
-using namespace lima::xh;
+using namespace lima::Xh;
 
 Interface::Interface(Camera& cam) :
 		m_cam(cam), m_det_info(cam), m_sync(cam)

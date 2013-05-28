@@ -1,7 +1,7 @@
 //###########################################################################
 // This file is part of LImA, a Library for Image Acquisition
 //
-// Copyright (C) : 2009-2011
+// Copyright (C) : 2009-2013
 // European Synchrotron Radiation Facility
 // BP 220, Grenoble 38043
 // FRANCE
@@ -35,7 +35,7 @@
 
 using namespace std;
 using namespace lima;
-using namespace lima::xh;
+using namespace lima::Xh;
 
 DEB_GLOBAL(DebModTest);
 
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	CtControl* m_control;
 
 	//xh configuration properties
-	string hostname = "gmvig1";
+	string hostname = "rnice31";
 	string configName = "config";
 	int port = 1972;
 
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 		m_camera->setExtTrigOutput(0, Camera::XhTrigOut_dc);
 
 		CtSaving* saving = m_control->saving();
-		saving->setDirectory("/home/grm84/data");
+		saving->setDirectory("./data");
 		saving->setFormat(CtSaving::EDF);
 	 	saving->setPrefix("id24_");
 		saving->setSuffix(".edf");

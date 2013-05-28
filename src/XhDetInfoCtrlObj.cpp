@@ -10,7 +10,7 @@
 #include "XhCamera.h"
 
 using namespace lima;
-using namespace lima::xh;
+using namespace lima::Xh;
 
 DetInfoCtrlObj::DetInfoCtrlObj(Camera& cam) :
 		m_cam(cam) {
