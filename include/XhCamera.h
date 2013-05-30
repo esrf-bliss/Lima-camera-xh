@@ -106,9 +106,10 @@ Camera(string hostname, int port, string configName);
 
 	void setLatTime(double lat_time);
 	void getLatTime(double& lat_time);
-
-	void getExposureTimeRange(double& min_expo, double& max_expo) const;
-	void getLatTimeRange(double& min_lat, double& max_lat) const;
+        
+        // not implemented yet
+	//void getExposureTimeRange(double& min_expo, double& max_expo) const;
+	//void getLatTimeRange(double& min_lat, double& max_lat) const;
 
 	void setNbFrames(int nb_frames);
 	void getNbFrames(int& nb_frames);
