@@ -28,6 +28,7 @@
 #include <iostream>
 #include <string>
 #include <math.h>
+#include <climits>
 #include <iomanip>
 #include "XhCamera.h"
 #include "Exceptions.h"
@@ -68,6 +69,7 @@ Camera::Camera(string hostname, int port, string configName) : m_hostname(hostna
 	m_acq_thread = new AcqThread(*this);
 	m_acq_thread->start();
 	m_xh = new XhClient();
+	init();
 }
 
 Camera::~Camera() {
@@ -381,6 +383,22 @@ void Camera::getLatTime(double& lat_time) {
 	lat_time = 0;
 }
 
+void Camera::getExposureTimeRange(double& min_expo, double& max_expo) const {
+	DEB_MEMBER_FUNCT();
+	min_expo = 0.;
+	max_expo = (double)UINT_MAX * 20e-9; //32bits x 20 ns
+	DEB_RETURN() << DEB_VAR2(min_expo, max_expo);
+}
+
+void Camera::getLatTimeRange(double& min_lat, double& max_lat) const {
+	DEB_MEMBER_FUNCT();
+	// --- no info on min latency
+	min_lat = 0.;
+	// --- do not know how to get the max_lat, fix it as the max exposure time
+	max_lat = (double) UINT_MAX * 20e-9;
+	DEB_RETURN() << DEB_VAR2(min_lat, max_lat);
+}
+
 void Camera::setNbFrames(int nb_frames) {
 	DEB_MEMBER_FUNCT();
 	DEB_TRACE() << "Camera::setNbFrames - " << DEB_VAR1(nb_frames);
@@ -557,7 +575,7 @@ void Camera::enableHv(bool enable, bool overtemp, bool force) {
  * @param[out] num The number of values
  * @param[out] alt_cd Specifies whether there is alternative CD
  */
-void Camera::listAvailableCaps(int32_t* capValues, int& num, bool& alt_cd) {
+void Camera::listAvailableCaps(int* capValues, int& num, bool& alt_cd) {
 	DEB_MEMBER_FUNCT();
 	stringstream cmd;
 // example of capStr = "2 5 7 10 12 15 17 20 22 25 27 30 32 35 37 40 alternate-cd=1"
@@ -696,6 +714,35 @@ void Camera::setHeadCaps(int capsAB, int capsCD, int head) {
 }
 
 /**
+ * Set default timing parameters
+ *
+ * @param[out] timingParams  {@see Camera::XhTimingParameters}
+ */
+void Camera::setDefaultTimingParameters(XhTimingParameters& timingParams) {
+	timingParams.trigControl=XhTrigIn_noTrigger;
+	timingParams.trigMux=-1;
+	timingParams.orbitMux = -1;
+	timingParams.lemoOut = 0;
+	timingParams.correctRounding = false;
+	timingParams.groupDelay = 0;
+	timingParams.frameDelay = 0;
+	timingParams.scanPeriod = 0;
+	timingParams.auxDelay = 0;
+	timingParams.auxWidth = 1;
+	timingParams.longS12 = 0;
+	timingParams.frameTime = 0;
+	timingParams.shiftDown = 0;
+	timingParams.cyclesStart = 1;
+	timingParams.cyclesEnd = false;
+	timingParams.s1Delay = 0;
+	timingParams.s2Delay = 0;
+	timingParams.xclkDelay = 0;
+	timingParams.rstRDelay = 0;
+	timingParams.rstFDelay = 0;
+	timingParams.allowExcess = false;
+}
+
+/**
  * Setup a single timing group.
  *
  * @param[in] groupNum Group number (0..n-1)
@@ -703,40 +750,17 @@ void Camera::setHeadCaps(int capsAB, int capsCD, int head) {
  * @param[in] nscans Number of scans per frame (0 to calc maximum possible)
  * @param[in] intTime Integration time (20 ns cycles)
  * @param[in] last true => Last group of experiment => write all to memory
- * @param[in] trigControl Trigger control {@see #Camera::TriggerControlType}
- * @param[in] trigMux Trigger Mux select (Lemo0..7, 8=delayed orbit, 9 = Software)
- * @param[in] orbitMux Orbit mux trigger select (0=direct, 1=delays 2..3 future)
- * @param[in] lemoOut Signals for 8 Lemo outputs (binary coded 0..255 for simple use)
- * @param[in] correctRounding Adjust group & frame delay to exactly match the frame time
- * @param[in] groupDelay Delay to add before group
- * @param[in] frameDelay Delay to add at before each frame
- * @param[in] scanPeriod Scan period (default packs as close as possible)
- * @param[in] auxDelay Aux signal delay
- * @param[in] auxWidth Aux Signal Pulse Width
- * @param[in] longS12 Make Long overlapping S1,S2&XRST for (first) group
- * @param[in] frameTime Specify Frame time, calc number of scans per frame
- * @param[in] shiftDown Shift down data 0..4 bits to for averaging
- * @param[in] cyclesStart Start a block (sub)frames to cycle over and specify num cycles
- * @param[in] cyclesEnd End block of (sub)frames
- * @param[in] s1Delay S1 fine delay in 0.25 cycles (0..3)
- * @param[in] s2Delay S2 fine delay in 0.25 cycles (0..3)
- * @param[in] xclkDelay XClk fine delay in 0.25 cycles (0..3)
- * @param[in] rstRDelay Reset rising delay (0..3)
- * @param[in] rstFDelay Reset Falling delay
- * @param[in] allowExcess Allow programming of more frame than will fit in DRAM, for manual probing
+ * @param[in] timingParams Additional timing parameters {@see Camera::XhTimingParameters}
  */
-void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last,
-		Camera::TriggerControlType trigControl, int trigMux, int orbitMux, int lemoOut, bool correctRounding,
-		int groupDelay, int frameDelay, int scanPeriod, int auxDelay, int auxWidth, int longS12, int frameTime,
-		int shiftDown, int cyclesStart, bool cyclesEnd, int s1Delay, int s2Delay, int xclkDelay, int rstRDelay,
-		int rstFDelay, bool allowExcess) {
+void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last, const XhTimingParameters& timingParams) {
 	DEB_MEMBER_FUNCT();
 	stringstream cmd;
 	cmd << "xstrip timing setup-group " << m_sysName << " " << groupNum << " " << nframes << " " << nscans << " "
 			<< intTime;
 	if (last)
 		cmd << " last";
-	switch (trigControl & (Camera::XhTrigIn_groupTrigger | Camera::XhTrigIn_frameTrigger | Camera::XhTrigIn_scanTrigger)) {
+
+	switch (timingParams.trigControl & (Camera::XhTrigIn_groupTrigger | Camera::XhTrigIn_frameTrigger | Camera::XhTrigIn_scanTrigger)) {
 	case Camera::XhTrigIn_groupTrigger:
 		cmd << " ext-trig-group";
 		break;
@@ -753,7 +777,7 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 		cmd << " ext-trig-scan-only";
 		break;
 	}
-	switch (trigControl & (Camera::XhTrigIn_groupOrbit | Camera::XhTrigIn_frameOrbit | Camera::XhTrigIn_scanOrbit)) {
+	switch (timingParams.trigControl & (Camera::XhTrigIn_groupOrbit | Camera::XhTrigIn_frameOrbit | Camera::XhTrigIn_scanOrbit)) {
 	case Camera::XhTrigIn_groupOrbit:
 		cmd << " ext-orbit-group";
 		break;
@@ -770,57 +794,57 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 		cmd << " orbit-scan-only";
 		break;
 	}
-	if (trigControl & Camera::XhTrigIn_fallingTrigger)
+	if (timingParams.trigControl & Camera::XhTrigIn_fallingTrigger)
 		cmd << " trig-falling";
 
-	if (trigMux != -1)
-		cmd << " trig-mux " << trigMux;
-	if (orbitMux != -1)
-		cmd << " orbit-mux " << orbitMux;
-	if (lemoOut != 0)
-		cmd << " lemo-out " << lemoOut;
-	if (correctRounding)
+	if (timingParams.trigMux != -1)
+		cmd << " trig-mux " << timingParams.trigMux;
+	if (timingParams.orbitMux != -1)
+		cmd << " orbit-mux " << timingParams.orbitMux;
+	if (timingParams.lemoOut != 0)
+		cmd << " lemo-out " << timingParams.lemoOut;
+	if (timingParams.correctRounding)
 		cmd << " correct-rounding";
-	if (groupDelay != 0)
-		cmd << " group-delay " << groupDelay;
-	if (frameDelay != 0)
-		cmd << " frame-delay " << frameDelay;
-	if (scanPeriod != 0)
-		cmd << " scan-period " << scanPeriod;
-	if (auxDelay != 0)
-		cmd << " aux-delay " << auxDelay;
-	if (auxWidth != 1)
-		cmd << " aux-width " << auxWidth;
-	if (longS12 != 0)
-		cmd << " long-s1 " << longS12;
-	if (frameTime != 0)
-		cmd << " frame-time " << frameTime;
-	if (shiftDown != 0)
-		cmd << " shift-down " << shiftDown;
-	if (cyclesStart != 1)
-		cmd << " cycles-start " << cyclesStart;
-	if (cyclesEnd)
+	if (timingParams.groupDelay != 0)
+		cmd << " group-delay " << timingParams.groupDelay;
+	if (timingParams.frameDelay != 0)
+		cmd << " frame-delay " << timingParams.frameDelay;
+	if (timingParams.scanPeriod != 0)
+		cmd << " scan-period " << timingParams.scanPeriod;
+	if (timingParams.auxDelay != 0)
+		cmd << " aux-delay " << timingParams.auxDelay;
+	if (timingParams.auxWidth != 1)
+		cmd << " aux-width " << timingParams.auxWidth;
+	if (timingParams.longS12 != 0)
+		cmd << " long-s1 " << timingParams.longS12;
+	if (timingParams.frameTime != 0)
+		cmd << " frame-time " << timingParams.frameTime;
+	if (timingParams.shiftDown != 0)
+		cmd << " shift-down " << timingParams.shiftDown;
+	if (timingParams.cyclesStart != 1)
+		cmd << " cycles-start " << timingParams.cyclesStart;
+	if (timingParams.cyclesEnd)
 		cmd << " cycles-end";
-	if (s1Delay != 0)
-		cmd << " s1-delay " << s1Delay;
-	if (s2Delay != 0)
-		cmd << " s2-delay " << s2Delay;
-	if (xclkDelay != 0)
-		cmd << " xclk-delay " << xclkDelay;
-	if (rstRDelay != 0)
-		cmd << " rst-r-delay " << rstRDelay;
-	if (rstFDelay != 0)
-		cmd << " rst-f-delay " << rstFDelay;
-	if (allowExcess)
+	if (timingParams.s1Delay != 0)
+		cmd << " s1-delay " << timingParams.s1Delay;
+	if (timingParams.s2Delay != 0)
+		cmd << " s2-delay " << timingParams.s2Delay;
+	if (timingParams.xclkDelay != 0)
+		cmd << " xclk-delay " << timingParams.xclkDelay;
+	if (timingParams.rstRDelay != 0)
+		cmd << " rst-r-delay " << timingParams.rstRDelay;
+	if (timingParams.rstFDelay != 0)
+		cmd << " rst-f-delay " << timingParams.rstFDelay;
+	if (timingParams.allowExcess)
 		cmd << " allow-excess";
 
 	int num_frames;
 	m_xh->sendWait(cmd.str(), num_frames);
 
-	if (trigControl != Camera::XhTrigIn_noTrigger) {
+	if (timingParams.trigControl != Camera::XhTrigIn_noTrigger) {
 		setTrigMode(ExtTrigMult);
 	}
-	if (trigMux == 9) {
+	if (timingParams.trigMux == 9) {
 		setTrigMode(IntTrigMult);
 	}
 	if (last) {
@@ -950,10 +974,10 @@ void Camera::setTimingOrbit(int delay, bool use_falling_edge) {
  * @param[in] firstGroup The first group to output [0...n-]] where n is the number of groups configured
  * @param[in] nGroups The number of groups to output [1...n] where n is the number of groups configured
  */
-void Camera::getTimingInfo(uint32_t* buff, int firstParam, int nParams, int firstGroup, int nGroups) {
+void Camera::getTimingInfo(unsigned int* buff, int firstParam, int nParams, int firstGroup, int nGroups) {
 	DEB_MEMBER_FUNCT();
 	int timingHandle;
-	uint8_t* bptr = (uint8_t*) buff;
+	unsigned char* bptr = (unsigned char*) buff;
 	stringstream cmd, cmd1, cmd2;
 	cmd << "xstrip timing open " << m_sysName;
 	m_xh->sendWait(cmd.str(), timingHandle);
