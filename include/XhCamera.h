@@ -60,18 +60,18 @@ public:
 	struct XhStatus {
 	public:
 		enum XhState {
-			Idle, ///< The detector is not acquiringing data
-			PausedAtGroup, ///< The detector has paused at the beginning of a group
-			PausedAtFrame, ///< The detector has paused at the beginning of a frame
-			PausedAtScan, ///< The detector has paused at the beginning of a scan
-			Running ///< The detector is acquiring data.
+			Idle,			///< The detector is not acquiring data
+			PausedAtGroup,	///< The detector has paused at the beginning of a group
+			PausedAtFrame,	///< The detector has paused at the beginning of a frame
+			PausedAtScan, 	///< The detector has paused at the beginning of a scan
+			Running			///< The detector is acquiring data.
 		};
 		XhState state;
-		int group_num; ///< The current group number being acquired, only valid when not {@link #Idle}
-		int frame_num; ///< The current frame number, within a group, being acquired, only valid when not {@link #Idle}
-		int scan_num; ///< The current scan number, within a frame, being acquired, only valid when not {@link #Idle}
-		int cycle; ///< Not supported yet
-		int completed_frames; ///< The number of frames completed, only valid when not {@link #Idle}
+		int group_num;			///< The current group number being acquired, only valid when not {@link #Idle}
+		int frame_num;			///< The current frame number, within a group, being acquired, only valid when not {@link #Idle}
+		int scan_num;			///< The current scan number, within a frame, being acquired, only valid when not {@link #Idle}
+		int cycle;				///< Not supported yet
+		int completed_frames;	///< The number of frames completed, only valid when not {@link #Idle}
 	};
 
 Camera(string hostname, int port, string configName);
@@ -106,10 +106,9 @@ Camera(string hostname, int port, string configName);
 
 	void setLatTime(double lat_time);
 	void getLatTime(double& lat_time);
-        
-        // not implemented yet
-	//void getExposureTimeRange(double& min_expo, double& max_expo) const;
-	//void getLatTimeRange(double& min_lat, double& max_lat) const;
+
+	void getExposureTimeRange(double& min_expo, double& max_expo) const;
+	void getLatTimeRange(double& min_lat, double& max_lat) const;
 
 	void setNbFrames(int nb_frames);
 	void getNbFrames(int& nb_frames);
@@ -133,7 +132,7 @@ Camera(string hostname, int port, string configName);
 
 	enum ClockModeType {
 		XhInternalClock,		///> internal clock
-		XhESRF5468MHz,		///> ESRF 54.68 MHz clcok
+		XhESRF5468MHz,			///> ESRF 54.68 MHz clcok
 		XhESRF1136MHz			///> ESRF Clock settings for RF div 31 = 11.3 MHz
 	};
 
@@ -163,6 +162,31 @@ Camera(string hostname, int port, string configName);
 		XhTrigIn_fallingTrigger = 0x40	///>
 	};
 
+	struct XhTimingParameters {
+	public:
+		TriggerControlType trigControl;	///> Trigger control {@see #Camera::TriggerControlType}
+		int trigMux;					///> Trigger Mux select (Lemo0..7, 8=delayed orbit, 9 = Software)
+		int orbitMux;					///> Orbit mux trigger select (0=direct, 1=delays 2..3 future)
+		int lemoOut;					///> Signals for 8 Lemo outputs (binary coded 0..255 for simple use)
+		bool correctRounding;			///> Adjust group & frame delay to exactly match the frame time
+		int groupDelay;					///> Delay to add before group
+		int frameDelay;					///> Delay to add at before each frame
+		int scanPeriod;					///> Scan period (default packs as close as possible)
+		int auxDelay;					///> Aux signal delay
+		int auxWidth;					///> Aux Signal Pulse Width
+		int longS12;					///> Make Long overlapping S1,S2&XRST for (first) group
+		int frameTime;					///> Specify Frame time, calc number of scans per frame
+		int shiftDown;					///> Shift down data 0..4 bits to for averaging
+		int cyclesStart;				///> Start a block (sub)frames to cycle over and specify num cycles
+		bool cyclesEnd;					///> End block of (sub)frames
+		int s1Delay;					///> S1 fine delay in 0.25 cycles (0..3)
+		int s2Delay;					///> S2 fine delay in 0.25 cycles (0..3)
+		int xclkDelay;					///> XClk fine delay in 0.25 cycles (0..3)
+		int rstRDelay;					///> Reset rising delay (0..3)
+		int rstFDelay;					///> Reset Falling delay
+		bool allowExcess;				///> Allow programming of more frame than will fit in DRAM, for manual probing
+ 	};
+
 	vector<string> getDebugMessages();
 	void sendCommand(string cmd);
 	void shutDown(string cmd);
@@ -180,19 +204,13 @@ Camera(string hostname, int port, string configName);
 	void getHeadAdc(double& value, int head, HeadVoltageType voltageType);
 	void setHeadCaps(int capsAB, int capsCD, int head=-1);
 	void setCalEn(bool onOff, int head=-1);
-	void listAvailableCaps(int32_t* capValues, int& num, bool& alt_cd);
+	void listAvailableCaps(int* capValues, int& num, bool& alt_cd);
 
-	void setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last,
-			TriggerControlType trigControl=XhTrigIn_noTrigger,
-			int trigMux=-1, int orbitMux=-1, int lemoOut=0, bool correctRounding=false,
-			int groupDelay=0, int frameDelay=0, int scanPeriod = 0,
-			int auxDelay=0, int auxWidth=1,int longS12=0, int frameTime=0,
-			int shiftDown=0, int cyclesStart=1, bool cyclesEnd = false,
-			int s1Delay=0, int s2Delay=0, int xclkDelay=0, int rstRDelay=0, int rstFDelay=0,
-			bool allowExcess=false);
+	void setDefaultTimingParameters(XhTimingParameters& timingParams);
+	void setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last, const XhTimingParameters& timingParams);
 	void modifyTimingGroup(int group_num, int fixed_reset=-1, bool last=false, bool allowExcess=false);
 	void setTimingOrbit(int delay, bool use_falling_edge=false);
-	void getTimingInfo(uint32_t* buff, int firstParam, int nParams, int firstGroup, int nGroups);
+	void getTimingInfo(unsigned int* buff, int firstParam, int nParams, int firstGroup, int nGroups);
 	void continueAcq();
 	void setLedTiming(int pause_time, int frame_time, int int_time, bool wait_for_trig);
 	void setExtTrigOutput(int trigNum, TriggerOutputType trigType, int width=0, bool invert=false);

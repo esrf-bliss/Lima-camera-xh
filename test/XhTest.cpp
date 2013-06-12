@@ -30,7 +30,6 @@
 #include "XhCamera.h"
 #include "XhInterface.h"
 #include "Debug.h"
-//#include "Exception.h"
 #include <iostream>
 
 using namespace std;
@@ -42,16 +41,16 @@ DEB_GLOBAL(DebModTest);
 int main(int argc, char *argv[])
 {
 	DEB_GLOBAL_FUNCT();
-//	DebParams::setModuleFlags(DebParams::AllFlags);
-//	DebParams::setTypeFlags(DebParams::AllFlags);
-//	DebParams::setFormatFlags(DebParams::AllFlags);
+	DebParams::setModuleFlags(DebParams::AllFlags);
+	DebParams::setTypeFlags(DebParams::AllFlags);
+	DebParams::setFormatFlags(DebParams::AllFlags);
 
 	Camera *m_camera;
 	Interface *m_interface;
 	CtControl* m_control;
 
 	//xh configuration properties
-	string hostname = "rnice31";
+	string hostname = "gmvig1"; //"rnice31";
 	string configName = "config";
 	int port = 1972;
 
@@ -60,16 +59,18 @@ int main(int argc, char *argv[])
 		m_camera = new Camera(hostname, port, configName);
 		m_interface = new Interface(*m_camera);
 		m_control = new CtControl(m_interface);
-		m_camera->init();
 
+		// Setup user timing controls
 		int nframes;
-		Camera::TriggerControlType trigControl;
-		trigControl = (Camera::TriggerControlType) (Camera::XhTrigIn_noTrigger);
-		m_camera->setTimingGroup(0, 10, 5, 50000000, 0, trigControl);
-		m_camera->setTimingGroup(1, 4, 5, 50000000, 1, trigControl);
+		Camera::XhTimingParameters timingParams;
+		m_camera->setDefaultTimingParameters(timingParams);
+		timingParams.trigControl = (Camera::TriggerControlType) (Camera::XhTrigIn_noTrigger);
+		m_camera->setTimingGroup(0, 10, 5, 50000000, 0, timingParams);
+		m_camera->setTimingGroup(1, 4, 5, 50000000, 1, timingParams);
 		m_camera->setupClock(Camera::XhESRF5468MHz);
 		m_camera->setExtTrigOutput(0, Camera::XhTrigOut_dc);
 
+		// setup fileformat and data saving info
 		CtSaving* saving = m_control->saving();
 		saving->setDirectory("./data");
 		saving->setFormat(CtSaving::EDF);
@@ -78,6 +79,7 @@ int main(int argc, char *argv[])
 		saving->setSavingMode(CtSaving::AutoFrame);
 		saving->setOverwritePolicy(CtSaving::Append);
 
+		// do acquisition
 		m_camera->getNbFrames(nframes);
 		m_control->acquisition()->setAcqNbFrames(nframes);
 		m_control->prepareAcq();
@@ -101,8 +103,8 @@ int main(int argc, char *argv[])
 //			cout << buff[0] << " " << buff[1] << " " << buff[2] << " " << buff[1023] << endl;
 //		}
 
-	} catch (Exception e) {
-		DEB_ERROR() << "LIMA Exception: " << e;
+	} catch (Exception& ex) {
+		DEB_ERROR() << "LIMA Exception: " << ex;
 	} catch (...) {
 		DEB_ERROR() << "Unkown exception!";
 	}
