@@ -31,6 +31,7 @@
 #include "XhInterface.h"
 #include "Debug.h"
 #include <iostream>
+#include <unistd.h>
 
 using namespace std;
 using namespace lima;

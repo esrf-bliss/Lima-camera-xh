@@ -28,6 +28,7 @@
 #include <iostream>
 #include <string>
 #include <math.h>
+#include <unistd.h>
 #include <climits>
 #include <iomanip>
 #include "XhCamera.h"
