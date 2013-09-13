@@ -635,6 +635,7 @@ int XhClient::getChar() {
 	} else {
 		m_just_read = 0;
 	}
+	//std::cout << "[" << m_rd_buff[m_cur_pos] << "]";
 	return m_rd_buff[m_cur_pos++];
 
 }

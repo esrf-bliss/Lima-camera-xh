@@ -131,7 +131,7 @@ Camera(string hostname, int port, string configName);
 	};
 
 	enum ClockModeType {
-		XhInternalClock,		///> internal clock
+		XhInternalClock,		///> internal clock - 20 ns
 		XhESRF5468MHz,			///> ESRF 54.68 MHz clcok
 		XhESRF1136MHz			///> ESRF Clock settings for RF div 31 = 11.3 MHz
 	};
@@ -223,7 +223,12 @@ Camera(string hostname, int port, string configName);
 	void setOffsets(int first, int num, int value, bool direct=false);
 	void syncClock();
 
-	void readFrame(void* ptr, int frame_nb);
+	void readFrame(void* ptr, int frame_nb, int nframes);
+	
+	void setNbScans(int nb_scans);
+	void getNbScans(int& nb_scans);
+	void getTotalFrames(int& nframes);
+	
 
 private:
 	// xh specific
@@ -250,8 +255,11 @@ private:
 	bool m_quit;
 	int m_acq_frame_nb; // nos of frames acquired
 	mutable Cond m_cond;
-
-
+	XhTimingParameters m_timingParams;
+	int m_nb_scans;
+	int m_clock_mode;
+	//double timearray[3] ;
+	
 	// Buffer control object
 	SoftBufferCtrlObj m_bufferCtrlObj;
 

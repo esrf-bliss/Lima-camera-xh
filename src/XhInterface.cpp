@@ -74,7 +74,7 @@ void Interface::reset(ResetLevel reset_level) {
 	DEB_PARAM() << DEB_VAR1(reset_level);
 
 	stopAcq();
-	m_cam.reset();
+	//m_cam.reset();
 }
 
 void Interface::prepareAcq() {

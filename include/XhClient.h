@@ -51,6 +51,10 @@ public:
 	void sendWait(string cmd, double& value);
 	void sendWait(string cmd, string& value);
 
+	int waitForResponse(string& value);
+	int waitForResponse(double& value);
+	int waitForResponse(int& value);
+
 	int connectToServer (const string hostname, int port);
 	void disconnectFromServer();
 	int initServerDataPort();
@@ -83,9 +87,6 @@ private:
 		CLN_NEXT_STRRET			// '* ': read string ret value
 	};
 	void sendCmd(const string cmd);
-	int waitForResponse(string& value);
-	int waitForResponse(double& value);
-	int waitForResponse(int& value);
 	int waitForPrompt();
 	int nextLine(string *errmsg, int *ivalue, double *dvalue, string *svalue, int *done, int *outoff);
 	int getChar();

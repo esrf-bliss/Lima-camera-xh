@@ -111,6 +111,17 @@ void Camera::init() {
 		m_xh->sendWait(cmd3.str(), m_npixels);
 		DEB_TRACE() << "configured pixels as " << m_npixels;
 	}
+	
+	//call setDefaultTimingParameters to initialize
+	setDefaultTimingParameters(m_timingParams);
+	//by default, 1 scan
+	m_nb_scans = 1;
+	m_clock_mode = 0;
+	//timearray[0] = 20*1e-9;
+	//timearray[1] = 22*1e-9;
+	//timearray[2] = 22*1e-9;
+	DEB_TRACE() << " m_timingParams.trigMux : " << m_timingParams.trigMux;
+	
 }
 
 void Camera::reset() {
@@ -121,6 +132,20 @@ void Camera::reset() {
 
 void Camera::prepareAcq() {
 	DEB_MEMBER_FUNCT();
+	int mexptime;
+	mexptime = (int) round(m_exp_time);
+	DEB_TRACE() << " nb frames : " << m_nb_frames;
+	DEB_TRACE() << " nb scans  : " << m_nb_scans;
+	DEB_TRACE() << " exp time  : " << mexptime;
+	if (mexptime !=0 ){
+	   setTimingGroup(0,m_nb_frames,m_nb_scans,mexptime,1,m_timingParams);
+	} else {
+		int total_frames;
+		getTotalFrames(total_frames);
+		if (m_nb_frames != total_frames)
+			THROW_HW_ERROR(Error) << " Trying to collect a different number of frames than is currently configured ";		
+	}
+	
 }
 
 void Camera::startAcq() {
@@ -148,29 +173,33 @@ void Camera::stopAcq() {
 		m_cond.wait();
 }
 
-void Camera::readFrame(void *bptr, int frame_nb) {
+void Camera::readFrame(void *bptr, int frame_nb, int nframes) {
 	DEB_MEMBER_FUNCT();
 	stringstream cmd;
-	int num;
+	int num, retval;
 	DEB_TRACE() << "reading frame " << frame_nb;
 	if (m_uninterleave) {
-		cmd << "read 0 0 " << frame_nb << " " << m_npixels/2 << " 2 1 from " << m_openHandle;
+		cmd << "read 0 0 " << frame_nb << " " << m_npixels/2 << " 2 " << nframes << " from " << m_openHandle;
 	} else {
-		cmd << "read 0 0 " << frame_nb << " " << m_npixels << " 1 1 from " << m_openHandle;
+		cmd << "read 0 0 " << frame_nb << " " << m_npixels << " 1 " << nframes <<" from " << m_openHandle;
 	}
 	if (m_image_type == Bpp16) {
-		num = m_npixels * sizeof(short) ;
+		num = nframes * m_npixels * sizeof(short) ;
 		cmd <<  " raw";
 	} else {
-		num = m_npixels * sizeof(long);
+		num = nframes * m_npixels * sizeof(long);
 		cmd << " long";
 	}
-	m_xh->sendWait(cmd.str());
+	AutoMutex aLock(m_cond.mutex());
+	m_xh->sendNowait(cmd.str());
 	m_xh->getData(bptr, num);
+	if (m_xh->waitForResponse(retval) < 0) {
+		THROW_HW_ERROR(Error) << "Waiting for response in readFrame";
+	}
 
-	uint32_t *dptr;
-	dptr = (uint32_t *)bptr;
-	std::cout << *dptr << " " << *(dptr+1) << " " << *(dptr+2) << std::endl;
+//	uint32_t *dptr;
+//	dptr = (uint32_t *)bptr;
+//	std::cout << *dptr << " " << *(dptr+1) << " " << *(dptr+2) << std::endl;
 }
 
 void Camera::getStatus(XhStatus& status) {
@@ -179,7 +208,9 @@ void Camera::getStatus(XhStatus& status) {
 	string str;
 	unsigned pos, pos2;
 	cmd << "xstrip timing read-status " << m_sysName;
+	AutoMutex aLock(m_cond.mutex());
 	m_xh->sendWait(cmd.str(), str);
+	aLock.unlock();
 	DEB_TRACE() << "xh status " << str;
 	pos = str.find(":");
 	string state = str.substr (2, pos-2);
@@ -249,15 +280,33 @@ void Camera::AcqThread::threadFunction() {
 		while (continueFlag && (!m_cam.m_nb_frames || m_cam.m_acq_frame_nb < m_cam.m_nb_frames)) {
 			XhStatus status;
 			m_cam.getStatus(status);
-			if (status.state == status.Idle || status.completed_frames > m_cam.m_acq_frame_nb) {
-
-				void* bptr = buffer_mgr.getFrameBufferPtr(m_cam.m_acq_frame_nb);
-				m_cam.readFrame(bptr, m_cam.m_acq_frame_nb);
-				HwFrameInfoType frame_info;
-				frame_info.acq_frame_nb = m_cam.m_acq_frame_nb;
-				continueFlag = buffer_mgr.newFrameReady(frame_info);
-				DEB_TRACE() << "acqThread::threadFunction() newframe ready ";
-				++m_cam.m_acq_frame_nb;
+			if (status.state == status.Idle || (status.completed_frames > m_cam.m_acq_frame_nb) ) {
+				int nframes;
+				if (status.state == status.Idle) {
+					nframes = m_cam.m_nb_frames - m_cam.m_acq_frame_nb;
+				} else {
+					nframes = status.completed_frames - m_cam.m_acq_frame_nb;
+				}
+				long *dptr, *baseptr;
+				int npoints = m_cam.m_npixels;
+				if (m_cam.m_image_type == Bpp16) {
+					npoints /= 2;
+				}
+				//std::cout << "malloc " << nframes << " * " << npoints << std::endl; 
+				dptr = (long*)malloc(nframes*npoints * sizeof(long));
+				baseptr = dptr;
+				m_cam.readFrame(dptr, m_cam.m_acq_frame_nb, nframes);
+				for (int i=0; i<nframes; i++) {
+					long* bptr = (long*)buffer_mgr.getFrameBufferPtr(m_cam.m_acq_frame_nb);
+					memcpy(bptr,dptr,npoints*sizeof(long));
+					dptr += npoints;
+					HwFrameInfoType frame_info;
+					frame_info.acq_frame_nb = m_cam.m_acq_frame_nb;
+					continueFlag = buffer_mgr.newFrameReady(frame_info);
+					DEB_TRACE() << "acqThread::threadFunction() newframe ready ";
+					++m_cam.m_acq_frame_nb;
+				}
+				free(baseptr);
 			} else {
 				AutoMutex aLock(m_cam.m_cond.mutex());
 				continueFlag = !m_cam.m_wait_flag;
@@ -302,6 +351,7 @@ void Camera::setImageType(ImageType type) {
 	DEB_MEMBER_FUNCT();
 	m_image_type = type;
 }
+
 
 void Camera::getDetectorType(std::string& type) {
 	DEB_MEMBER_FUNCT();
@@ -359,16 +409,19 @@ void Camera::getTrigMode(TrigMode& mode) {
 void Camera::getExpTime(double& exp_time) {
 	DEB_MEMBER_FUNCT();
 	DEB_TRACE() << "Camera::getExpTime";
-	//	AutoMutex aLock(m_cond.mutex());
-	exp_time = m_exp_time;
+	// convert to seconds
+	double timearray[] = {20*1e-9,22*1e-9,22*1e-9};
+	exp_time = m_exp_time * timearray[m_clock_mode];
 	DEB_RETURN() << DEB_VAR1(exp_time);
 }
 
 void Camera::setExpTime(double exp_time) {
 	DEB_MEMBER_FUNCT();
 	DEB_TRACE() << "Camera::setExpTime - " << DEB_VAR1(exp_time);
-
-	m_exp_time = exp_time;
+        // we receive seconds, 
+	double timearray[] = {20*1e-9,22*1e-9,22*1e-9};
+	m_exp_time = exp_time / timearray[m_clock_mode];
+	DEB_TRACE() << "Camera::setExpTime ------------------------------>"  << DEB_VAR1(m_exp_time) ;
 }
 
 void Camera::setLatTime(double lat_time) {
@@ -414,6 +467,18 @@ void Camera::getNbFrames(int& nb_frames) {
 	DEB_TRACE() << "Camera::getNbFrames";
 	DEB_RETURN() << DEB_VAR1(m_nb_frames);
 	nb_frames = m_nb_frames;
+}
+
+void Camera::getNbScans(int& nb_scans) {
+	DEB_MEMBER_FUNCT();
+	DEB_TRACE() << "Camera::getNbscans";
+	nb_scans = m_nb_scans;
+}
+
+void Camera::setNbScans(int nb_scans) {
+	DEB_MEMBER_FUNCT();
+	DEB_TRACE() << "Camera::setNbScans" << DEB_VAR1(nb_scans);
+	m_nb_scans = nb_scans;
 }
 
 bool Camera::isAcqRunning() const {
@@ -741,6 +806,7 @@ void Camera::setDefaultTimingParameters(XhTimingParameters& timingParams) {
 	timingParams.rstRDelay = 0;
 	timingParams.rstFDelay = 0;
 	timingParams.allowExcess = false;
+	
 }
 
 /**
@@ -1013,6 +1079,7 @@ void Camera::setupClock(ClockModeType clockMode, int pll_gain, int extra_div, in
 		cmd << " esrf";
 	if (clockMode == XhESRF1136MHz)
 		cmd << " esrf11";
+	m_clock_mode = clockMode;
 	if (stage1)
 		cmd << " stage1";
 	if (nocheck)
@@ -1093,11 +1160,23 @@ void Camera::syncClock() {
 /**
  * Send a command directly to the server. Not recommend for general use.
  *
- * @param[in] cmd A server command
+ * @param[in] cmd A server command returning an int
  */
 void Camera::sendCommand(string cmd) {
 	DEB_MEMBER_FUNCT();
 	m_xh->sendWait(cmd);
+}
+
+/**
+ * Get the number of h/w configured time frames.
+ *
+ * @param[out] nframes return the number of h/w configured time frames
+ */
+void Camera::getTotalFrames(int& nframes) {
+	DEB_MEMBER_FUNCT();
+	stringstream cmd;
+	cmd << "%xstrip_num_tf";
+	m_xh->sendWait(cmd.str(), nframes);
 }
 
 /**

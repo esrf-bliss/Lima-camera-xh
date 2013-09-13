@@ -182,7 +182,8 @@ namespace Xh
 	void getHeadAdc(double& value /Out/, int head, HeadVoltageType voltageType);
 	void setHeadCaps(int capsAB, int capsCD, int head=-1);
 	void setCalEn(bool onOff, int head=-1);
-	void listAvailableCaps(int* capValues, int& num /Out/, bool& alt_cd /Out/);
+	//mcd
+	void listAvailableCaps(int* capValues /Out/, int& num /Out/, bool& alt_cd /Out/);
 	
 	void setDefaultTimingParameters(XhTimingParameters& timingParams);
 	void setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last, const XhTimingParameters& timingParams);
@@ -202,7 +203,11 @@ namespace Xh
 	void setOffsets(int first, int num, int value, bool direct=false);
 	void syncClock();
 
-	void readFrame(void* ptr, int frame_nb);
+	void readFrame(void* ptr, int frame_nb, int nframes);
+
+	void setNbScans(int nb_scans);
+	void getNbScans(int& nb_scans /Out/);
+	
 
   };
 

@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 		}
 		uint32_t buff[1024];
 		for (int i=0; i<nframes; i++) {
-			m_camera->readFrame(buff, i);
+			m_camera->readFrame(buff, i, 1);
 			cout << buff[0] << " " << buff[1] << " " << buff[2] << " " << buff[1023] << endl;
 		}
 //		m_camera->uninterleave(true);
