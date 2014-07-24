@@ -33,7 +33,7 @@ namespace Xh
 %End
 
   public:
-	Interface(Xh::Camera& cam);
+	Interface(Xh::Camera& cam /KeepReference/);
 	virtual ~Interface();
 
  	virtual void getCapList(std::vector<HwCap> &cap_list /Out/) const;
