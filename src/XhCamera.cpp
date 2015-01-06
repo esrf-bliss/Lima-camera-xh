@@ -32,8 +32,8 @@
 #include <climits>
 #include <iomanip>
 #include "XhCamera.h"
-#include "Exceptions.h"
-#include "Debug.h"
+#include "lima/Exceptions.h"
+#include "lima/Debug.h"
 
 using namespace lima;
 using namespace lima::Xh;

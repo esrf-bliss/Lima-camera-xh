@@ -47,9 +47,9 @@
 #include <signal.h>
 
 #include "XhClient.h"
-#include "ThreadUtils.h"
-#include "Exceptions.h"
-#include "Debug.h"
+#include "lima/ThreadUtils.h"
+#include "lima/Exceptions.h"
+#include "lima/Debug.h"
 
 //static char errorMessage[1024];
 
