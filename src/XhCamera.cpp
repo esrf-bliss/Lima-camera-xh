@@ -1168,6 +1168,18 @@ void Camera::sendCommand(string cmd) {
 }
 
 /**
+ * Get the maximum number of frames programable wih the current XH configuration.
+ *
+ * @param[out] nframes return the number of h/w configured time frames
+ */
+void Camera::getMaxFrames(string& nframes) {
+	DEB_MEMBER_FUNCT();
+	stringstream cmd;
+	cmd << "%xstrip_num_tf";
+	m_xh->sendWait(cmd.str(), nframes);
+}
+
+/**
  * Get the number of h/w configured time frames.
  *
  * @param[out] nframes return the number of h/w configured time frames

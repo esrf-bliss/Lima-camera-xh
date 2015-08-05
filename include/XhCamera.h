@@ -228,6 +228,7 @@ Camera(string hostname, int port, string configName);
 	void setNbScans(int nb_scans);
 	void getNbScans(int& nb_scans);
 	void getTotalFrames(int& nframes);
+	void getMaxFrames(string& nframes);
 	
 
 private:
