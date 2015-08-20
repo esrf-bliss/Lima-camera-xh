@@ -207,7 +207,7 @@ namespace Xh
 
 	void setNbScans(int nb_scans);
 	void getNbScans(int& nb_scans /Out/);
-	void getMaxFrames(string& nframes /Out/);
+        void getMaxFrames(std::string& nframes /Out/);
 	
 
   };
