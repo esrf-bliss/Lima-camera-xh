@@ -187,7 +187,7 @@ void Camera::readFrame(void *bptr, int frame_nb, int nframes) {
 		num = nframes * m_npixels * sizeof(short) ;
 		cmd <<  " raw";
 	} else {
-		num = nframes * m_npixels * sizeof(long);
+		num = nframes * m_npixels * sizeof(int32_t);
 		cmd << " long";
 	}
 	AutoMutex aLock(m_cond.mutex());
@@ -287,18 +287,18 @@ void Camera::AcqThread::threadFunction() {
 				} else {
 					nframes = status.completed_frames - m_cam.m_acq_frame_nb;
 				}
-				long *dptr, *baseptr;
+				int32_t *dptr, *baseptr;
 				int npoints = m_cam.m_npixels;
 				if (m_cam.m_image_type == Bpp16) {
 					npoints /= 2;
 				}
 				//std::cout << "malloc " << nframes << " * " << npoints << std::endl; 
-				dptr = (long*)malloc(nframes*npoints * sizeof(long));
+				dptr = (int32_t*)malloc(nframes*npoints * sizeof(int32_t));
 				baseptr = dptr;
 				m_cam.readFrame(dptr, m_cam.m_acq_frame_nb, nframes);
 				for (int i=0; i<nframes; i++) {
-					long* bptr = (long*)buffer_mgr.getFrameBufferPtr(m_cam.m_acq_frame_nb);
-					memcpy(bptr,dptr,npoints*sizeof(long));
+					int32_t* bptr = (int32_t*)buffer_mgr.getFrameBufferPtr(m_cam.m_acq_frame_nb);
+					memcpy(bptr,dptr,npoints*sizeof(int32_t));
 					dptr += npoints;
 					HwFrameInfoType frame_info;
 					frame_info.acq_frame_nb = m_cam.m_acq_frame_nb;
