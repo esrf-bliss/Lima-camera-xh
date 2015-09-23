@@ -617,11 +617,10 @@ int XhClient::nextLine(string *errmsg, int *ivalue, double *dvalue, string *sval
 }
 
 int XhClient::getChar() {
-	DEB_MEMBER_FUNCT();
 	int r;
 
 	if (!m_valid) {
-		THROW_HW_ERROR(Error) << "Not connected to xh server ";
+		throw Error; //<< "Not connected to xh server ";
 	}
 	if (m_num_read == m_cur_pos) {
 		while ((r = recv(m_skt, m_rd_buff, RD_BUFF, 0)) < 0 && errno == EINTR)
