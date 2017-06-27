@@ -1,53 +1,54 @@
-############################################################################
+###########################################################################
 # This file is part of LImA, a Library for Image Acquisition
 #
-# Copyright (C) : 2009-2017
-# European Synchrotron Radiation Facility
-# BP 220, Grenoble 38043
-# FRANCE
-#
-# This is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
-# (at your option) any later version.
-#
-# This software is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, see <http://www.gnu.org/licenses/>.
+#  Copyright (C) : 2009-2017
+#  European Synchrotron Radiation Facility
+#  CS40220 38043 Grenoble Cedex 9 
+#  FRANCE
+# 
+#  Contact: lima@esrf.fr
+# 
+#  This is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3 of the License, or
+#  (at your option) any later version.
+# 
+#  This software is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+# 
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, see <http://www.gnu.org/licenses/>.
 ############################################################################
-# CMakeLists.txt for Xh camera
 
-SET(CMAKE_SHARED_LINKER_FLAGS "-Wl,--add-needed")
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--add-needed")
 
 #SOURCES
-SET(xh_srcs src/XhCamera.cpp  src/XhInterface.cpp
+set(xh_srcs src/XhCamera.cpp  src/XhInterface.cpp
 	 src/XhDetInfoCtrlObj.cpp src/XhSyncCtrlObj.cpp
 	 src/XhClient.cpp)
 	 
-FILE(STRINGS "VERSION" xh_vers)
+file(STRINGS "VERSION" xh_vers)
 
-ADD_LIBRARY(limaxh SHARED ${xh_srcs})
+add_library(limaxh SHARED ${xh_srcs})
 
 #INCLUDES
-TARGET_INCLUDE_DIRECTORIES(limaxh PUBLIC "${CMAKE_SOUURCE_DIR}/camera/common/espia/include")
-TARGET_INCLUDE_DIRECTORIES(limaxh PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(limaxh PUBLIC "${CMAKE_SOUURCE_DIR}/camera/common/espia/include")
+target_include_directories(limaxh PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 #LIBRARY
-TARGET_LINK_LIBRARIES(limaxh limacore)
+target_link_libraries(limaxh limacore)
 
-SET_TARGET_PROPERTIES(limaxh PROPERTIES VERSION ${xh_vers} SOVERSION "1")
+set_target_properties(limaxh PROPERTIES VERSION ${xh_vers} SOVERSION "1")
 
-INSTALL(TARGETS limaxh LIBRARY DESTINATION lib)
+install(TARGETS limaxh LIBRARY DESTINATION lib)
 
-IF(COMPILE_SIP)
-    SET(NAME "xh")
+if(COMPILE_SIP)
+    set(NAME "xh")
     include(CameraRunSIP)
-    INSTALL(FILES python/__init__.py DESTINATION "${PYTHON_SITE_PACKAGES_DIR}/Lima/Xh")
-ENDIF()
+    install(FILES python/__init__.py DESTINATION "${PYTHON_SITE_PACKAGES_DIR}/Lima/Xh")
+endif()
 
 if(COMPILE_TEST)
 	add_subdirectory(test/)
