@@ -209,8 +209,8 @@ namespace Xh
 	void getNbScans(int& nb_scans /Out/);
         void getMaxFrames(std::string& nframes /Out/);
 	
-
+  private:
+	Camera(const Xh::Camera&);
   };
 
 };
-
