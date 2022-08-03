@@ -1022,7 +1022,7 @@ void Camera::setLedTiming(int pause_time, int frame_time, int int_time, bool wai
  * @param[in] delay Delay in 20 ns clock cycles
  * @param[in] use_falling_edge Using falling edge of orbit input
  */
-void Camera::setTimingOrbit(int delay, bool use_falling_edge) {
+void Camera::setOrbitTrigger(int delay, bool use_falling_edge) {
 	DEB_MEMBER_FUNCT();
 	stringstream cmd;
 	cmd << "xstrip timing setup-orbit " << m_sysName <<  " " << delay;
@@ -1189,6 +1189,55 @@ void Camera::getTotalFrames(int& nframes) {
 	stringstream cmd;
 	cmd << "%xstrip_num_tf";
 	m_xh->sendWait(cmd.str(), nframes);
+}
+
+
+void Camera::setTrigMux(int trigMux) {
+	DEB_MEMBER_FUNCT();
+	/**
+	* 9 - Software trigger
+	* 8 - main trigger, delayed orbit
+	* 0...7 - Lemo
+	*/
+	if (trigMux == 9)
+		if (m_timingParams.trigControl & (Camera::XhTrigIn_groupTrigger | Camera::XhTrigIn_frameTrigger | Camera::XhTrigIn_scanTrigger)) {
+			m_timingParams.trigMux = trigMux;
+		} else {
+			THROW_HW_ERROR(Error) << "Cannot set trigger mux for current trigger mode";
+		}
+	if (8 >= trigMux >= 0) {
+		m_timingParams.trigMux = trigMux;
+	}
+	
+
+	DEB_TRACE() << "Set trig mux to" << trigMux;
+}
+
+void Camera::getTrigMux(int &trigMux) {
+	DEB_MEMBER_FUNCT();
+	trigMux = m_timingParams.trigMux;
+}
+
+void Camera::setOrbitTrig(int orbitMux) {
+	DEB_MEMBER_FUNCT();
+	/**
+	* 0=direct
+	* 1=delayed
+	* 2=LVDS direct
+	* 3=LVDS delayed
+	*/
+
+	if (3 >= orbitMux <= 0) {
+		m_timingParams.orbitMux = orbitMux;
+	} else {
+		THROW_HW_ERROR(Error) << "Invalid orbit mux value";
+	}
+}
+
+void Camera::getOrbitTrig(int &orbitMux) {
+	DEB_MEMBER_FUNCT();
+
+	orbitMux = m_timingParams.orbitMux;
 }
 
 /**

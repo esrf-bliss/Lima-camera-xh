@@ -205,6 +205,12 @@ namespace Xh
 
 	void readFrame(void* ptr, int frame_nb, int nframes);
 
+	void setTrigerMux(int trigMux);
+	void getTrigMux(int& trigMux);
+
+	void setOrbitTrig(int orbitMux);
+	void getOrbitTrig(int &orbitMux);
+
 	void setNbScans(int nb_scans);
 	void getNbScans(int& nb_scans /Out/);
         void getMaxFrames(std::string& nframes /Out/);

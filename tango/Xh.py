@@ -251,6 +251,14 @@ class XhClass(PyTango.DeviceClass):
 	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ]],
+       'trigMux':
+	[[PyTango.DevNumber,
+	PyTango.SCALAR,
+	PyTango.READ_WRITE]],
+    'orbitTrigger':
+        [[PyTango.DevNumber,
+        PyTango.SCALAR,
+        PyTango.READ_WRITE]],
        }
 
     def __init__(self,name) :

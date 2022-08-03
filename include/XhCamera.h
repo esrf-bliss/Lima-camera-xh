@@ -229,7 +229,12 @@ Camera(string hostname, int port, string configName);
 	void getNbScans(int& nb_scans);
 	void getTotalFrames(int& nframes);
 	void getMaxFrames(string& nframes);
-	
+
+	void setTrigMux(int trigMux);
+	void getTrigMux(int& trigMux);
+
+	void setOrbitTrig(int orbitMux);
+	void getOrbitTrig(int &orbitMux);
 
 private:
 	// xh specific
