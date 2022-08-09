@@ -236,6 +236,21 @@ class XhClass(PyTango.DeviceClass):
         'sendCommand':
         [[PyTango.DevString, "da.server command"],
          [PyTango.DevVoid, ""]],
+         'setHighVoltageOn':
+         [[PyTango.DevVoid, ""],
+         [PyTango.DevVoid, ""]],
+         'setHighVoltageOff':
+         [[PyTango.DevVoid, ""],
+         [PyTango.DevVoid, ""]],
+         'setHeadDac':
+         [[PyTango.DevFloat, "value"],
+         [PyTango.DevString, "type: XhVdd, XhVref, XhVrefc, XhVres1, XhVres2, XhVpupref, XhVclamp, XhVled"],
+         [PyTango.DevFloat, "head"],
+         [PyTango.DevBool, "direct"]],
+         'setHeadCaps':
+         [[PyTango.DevFloat, "caps AB"],
+         [PyTango.DevFloat, "caps CD"],
+         [PyTango.DevBool, "head"]],
         }
 		
     attr_list = {
@@ -251,15 +266,47 @@ class XhClass(PyTango.DeviceClass):
 	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ]],
+        'temperature':
+	[[PyTango.DevString,
+	PyTango.SCALAR,
+	PyTango.WRITE]],
        'trigMux':
-	[[PyTango.DevNumber,
+	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ_WRITE]],
-    'orbitTrigger':
-        [[PyTango.DevNumber,
-        PyTango.SCALAR,
-        PyTango.READ_WRITE]],
-       }
+        'orbitTrigger':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'lemoOut':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'correctRounding':
+    [[PyTango.DevBoolean,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'groupDelay':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'frameDelay':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'scanPeriod':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'auxDelay':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+          'auxWidth':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+    }
 
     def __init__(self,name) :
         PyTango.DeviceClass.__init__(self,name)
