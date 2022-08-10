@@ -184,6 +184,7 @@ namespace Xh
 	void setCalEn(bool onOff, int head=-1);
 	//mcd
 	void listAvailableCaps(int* capValues /Out/, int& num /Out/, bool& alt_cd /Out/);
+	void getAvailableTriggerModes(std::vector<std::string> &trigger_list /Out/);
 	
 	void setDefaultTimingParameters(XhTimingParameters& timingParams);
 	void setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last, const XhTimingParameters& timingParams);
@@ -205,9 +206,74 @@ namespace Xh
 
 	void readFrame(void* ptr, int frame_nb, int nframes);
 
+	void setTrigMux(int trigMux);
+	void getTrigMux(int& trigMux);
+
+	void setOrbitTrig(int orbitMux);
+	void getOrbitTrig(int &orbitMux);
+
+	void setLemoOut(std::vector<int> lemoOut);
+	void getLemoOut(std::vector<int>& lemoOut);
+
+	void setCorrectRounding(bool correctRounding);
+	void getCorrectRounding(bool& correctRounding);
+
+	void setGroupDelay(int groupDelay);
+	void getGroupDelay(int& groupDelay);
+
+	void setFrameDelay(int frame);
+	void getFrameDelay(int& frame);
+
+	void setScanPeriod(int scanPeriod);
+	void getScanPeriod(int& scanPeriod);
+
+	void setAuxDelay(int auxDelay);
+	void getAuxDelay(int& auxDelay);
+
+	void setAuxWidth(int auxWidth);
+	void getAuxWidth(int& auxWidth);
+
+	void setFrameTime(int frameTime);
+	void getFrameTime(int& frameTime);
+
+	void setShiftDown(int shiftDown);
+	void getShiftDown(int& shiftDown);
+
+	void setCyclesStart(int cyclesStart);
+	void getCyclesStart(int& cyclesStart);
+
+	void setCyclesEnd(int cyclesEnd);
+	void getCyclesEnd(int& cyclesEnd);
+
+	void setS1Delay(int s1Delay);
+	void getS1Delay(int& s1Delay);
+	
+	void setS2Delay(int s2Delay);
+	void getS2Delay(int& s2Delay);
+
+	void setXclkDelay(int xclkDelay);
+	void getXclkDelay(int& xclkDelay);
+
+	void setRstRDelay(int rstRDelay);
+	void getRstRDelay(int& rstRDelay);
+
+	void setRstFDelay(int rstFDelay);
+	void getRstFDelay(int& rstFDelay);
+
+	void setAllowExcess(bool allowExcess);
+	void getAllowExcess(bool& allowExcess);
+
+	void setCustomTriggerMode(std::string trig_mode);
+	void getCustomTriggerMode(std::string& trig_mode);
+
+	void setVoltage(int voltage);
+	void getVoltage(int& voltage);
+
 	void setNbScans(int nb_scans);
 	void getNbScans(int& nb_scans /Out/);
-        void getMaxFrames(std::string& nframes /Out/);
+    void getMaxFrames(std::string& nframes /Out/);
+	void getNbGroups(int& nb_groups /Out/);
+	void setNbGroups(int nb_groups);
 	
   private:
 	Camera(const Xh::Camera&);

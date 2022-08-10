@@ -162,6 +162,19 @@ Camera(string hostname, int port, string configName);
 		XhTrigIn_fallingTrigger = 0x40	///>
 	};
 
+	typedef map <TriggerControlType, std::string> TriggerNamesMap;
+
+	TriggerNamesMap triggerNames = {
+		{XhTrigIn_noTrigger, "No trigger"},
+		{XhTrigIn_groupTrigger, "Group trigger"},
+		{XhTrigIn_frameTrigger, "Frame trigger"},
+		{XhTrigIn_scanTrigger, "Scan trigger"},
+		{XhTrigIn_groupOrbit, "Group orbit"},
+		{XhTrigIn_frameOrbit, "Frame orbit"},
+		{XhTrigIn_scanOrbit, "Scan orbit"},
+		{XhTrigIn_fallingTrigger, "Falling trigger"},
+	};
+
 	struct XhTimingParameters {
 	public:
 		TriggerControlType trigControl;	///> Trigger control {@see #Camera::TriggerControlType}
@@ -205,6 +218,7 @@ Camera(string hostname, int port, string configName);
 	void setHeadCaps(int capsAB, int capsCD, int head=-1);
 	void setCalEn(bool onOff, int head=-1);
 	void listAvailableCaps(int* capValues, int& num, bool& alt_cd);
+	void getAvailableTriggerModes(std::vector<std::string> &trigger_list);
 
 	void setDefaultTimingParameters(XhTimingParameters& timingParams);
 	void setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last, const XhTimingParameters& timingParams);
@@ -229,7 +243,76 @@ Camera(string hostname, int port, string configName);
 	void getNbScans(int& nb_scans);
 	void getTotalFrames(int& nframes);
 	void getMaxFrames(string& nframes);
+<<<<<<< Updated upstream
 	
+=======
+
+	void getNbGroups(int& nb_groups);
+	void setNbGroups(int nb_groups);
+
+	void setTrigMux(int trigMux);
+	void getTrigMux(int& trigMux);
+
+	void setOrbitTrig(int orbitMux);
+	void getOrbitTrig(int &orbitMux);
+
+	void setLemoOut(std::vector<int> lemoOut);
+	void getLemoOut(std::vector<int>& lemoOut);
+
+	void setCorrectRounding(bool correctRounding);
+	void getCorrectRounding(bool& correctRounding);
+
+	void setGroupDelay(int groupDelay);
+	void getGroupDelay(int& groupDelay);
+
+	void setFrameDelay(int frame);
+	void getFrameDelay(int& frame);
+
+	void setScanPeriod(int scanPeriod);
+	void getScanPeriod(int& scanPeriod);
+
+	void setAuxDelay(int auxDelay);
+	void getAuxDelay(int& auxDelay);
+
+	void setAuxWidth(int auxWidth);
+	void getAuxWidth(int& auxWidth);
+
+	void setFrameTime(int frameTime);
+	void getFrameTime(int& frameTime);
+
+	void setShiftDown(int shiftDown);
+	void getShiftDown(int& shiftDown);
+
+	void setCyclesStart(int cyclesStart);
+	void getCyclesStart(int& cyclesStart);
+
+	void setCyclesEnd(int cyclesEnd);
+	void getCyclesEnd(int& cyclesEnd);
+
+	void setS1Delay(int s1Delay);
+	void getS1Delay(int& s1Delay);
+
+	void setS2Delay(int s2Delay);
+	void getS2Delay(int& s2Delay);
+
+	void setXclkDelay(int xclkDelay);
+	void getXclkDelay(int& xclkDelay);
+
+	void setRstRDelay(int rstRDelay);
+	void getRstRDelay(int& rstRDelay);
+
+	void setRstFDelay(int rstFDelay);
+	void getRstFDelay(int& rstFDelay);
+
+	void setAllowExcess(bool allowExcess);
+	void getAllowExcess(bool& allowExcess);
+>>>>>>> Stashed changes
+
+	void setCustomTriggerMode(std::string trig_mode);
+	void getCustomTriggerMode(std::string& trig_mode);
+
+	void setVoltage(int voltage);
+	void getVoltage(int& voltage);
 
 private:
 	// xh specific
@@ -263,6 +346,11 @@ private:
 	
 	// Buffer control object
 	SoftBufferCtrlObj m_bufferCtrlObj;
+
+	int maxCycles = 3;
+	int minCycles = 0;
+
+	int m_voltage;
 
 };
 
