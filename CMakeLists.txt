@@ -81,6 +81,7 @@ add_library(xh SHARED
   src/XhDetInfoCtrlObj.cpp
   src/XhSyncCtrlObj.cpp
   src/XhClient.cpp
+  src/XhRoiCtrlObj.cpp
   ${XH_INCS}
 )
 

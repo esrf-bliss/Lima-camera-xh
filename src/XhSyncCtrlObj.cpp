@@ -6,7 +6,7 @@
  */
 
 #include <sstream>
-#include "XhInterface.h"
+#include "XhSyncCtrlObj.h"
 #include "XhCamera.h"
 
 using namespace lima;

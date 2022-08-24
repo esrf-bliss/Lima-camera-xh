@@ -30,100 +30,45 @@
 #include "lima/HwInterface.h"
 
 namespace lima {
-namespace Xh {
+	namespace Xh {
 
-class Interface;
-class Camera;
+	class Interface;
+	class DetInfoCtrlObj;
+    class SyncCtrlObj;
+    class RoiCtrlObj;
 
-/*******************************************************************
- * \class DetInfoCtrlObj
- * \brief Control object providing Xh detector info interface
- *******************************************************************/
+	class Camera;
 
-class DetInfoCtrlObj: public HwDetInfoCtrlObj {
-DEB_CLASS_NAMESPC(DebModCamera, "DetInfoCtrlObj","Xh");
 
-public:
-	DetInfoCtrlObj(Camera& cam);
-	virtual ~DetInfoCtrlObj();
+	/*******************************************************************
+	 * \class Interface
+	 * \brief Xh hardware interface
+	 *******************************************************************/
 
-	virtual void getMaxImageSize(Size& max_image_size);
-	virtual void getDetectorImageSize(Size& det_image_size);
+	class Interface: public HwInterface {
+		DEB_CLASS_NAMESPC(DebModCamera, "Interface", "Xh");
 
-	virtual void getDefImageType(ImageType& def_image_type);
-	virtual void getCurrImageType(ImageType& curr_image_type);
-	virtual void setCurrImageType(ImageType curr_image_type);
+		public:
+			Interface(Camera& cam);
+			virtual ~Interface();
+			virtual void getCapList(CapList&) const;
+			virtual void reset(ResetLevel reset_level);
+			virtual void prepareAcq();
+			virtual void startAcq();
+			virtual void stopAcq();
+			virtual void getStatus(StatusType& status);
+			virtual int getNbHwAcquiredFrames();
 
-	virtual void getPixelSize(double& x_size, double &y_size);
-	virtual void getDetectorType(std::string& det_type);
-	virtual void getDetectorModel(std::string& det_model);
+		private:
+			Camera& m_cam;
+			CapList m_cap_list;
+			DetInfoCtrlObj* m_det_info;
+			HwBufferCtrlObj*  m_bufferCtrlObj;
+			SyncCtrlObj* m_sync;
+			RoiCtrlObj* m_roi;
+	};
 
-	virtual void registerMaxImageSizeCallback(HwMaxImageSizeCallback& cb);
-	virtual void unregisterMaxImageSizeCallback(HwMaxImageSizeCallback& cb);
-
-private:
-	Camera& m_cam;
-};
-
-/*******************************************************************
- * \class SyncCtrlObj
- * \brief Control object providing Xh synchronization interface
- *******************************************************************/
-
-class SyncCtrlObj: public HwSyncCtrlObj {
-DEB_CLASS_NAMESPC(DebModCamera,"SyncCtrlObj","Xh");
-
-public:
-	SyncCtrlObj(Camera& cam); //, BufferCtrlObj& buffer);
-	virtual ~SyncCtrlObj();
-
-	virtual bool checkTrigMode(TrigMode trig_mode);
-	virtual void setTrigMode(TrigMode trig_mode);
-	virtual void getTrigMode(TrigMode& trig_mode);
-
-	virtual void setExpTime(double exp_time);
-	virtual void getExpTime(double& exp_time);
-
-	virtual void setLatTime(double lat_time);
-	virtual void getLatTime(double& lat_time);
-
-	virtual void setNbHwFrames(int nb_frames);
-	virtual void getNbHwFrames(int& nb_frames);
-
-	virtual void getValidRanges(ValidRangesType& valid_ranges);
-
-private:
-	Camera& m_cam;
-};
-
-/*******************************************************************
- * \class Interface
- * \brief Xh hardware interface
- *******************************************************************/
-
-class Interface: public HwInterface {
-DEB_CLASS_NAMESPC(DebModCamera, "Interface", "Xh");
-
-public:
-	Interface(Camera& cam);
-	virtual ~Interface();
-	virtual void getCapList(CapList&) const;
-	virtual void reset(ResetLevel reset_level);
-	virtual void prepareAcq();
-	virtual void startAcq();
-	virtual void stopAcq();
-	virtual void getStatus(StatusType& status);
-	virtual int getNbHwAcquiredFrames();
-
-private:
-	Camera& m_cam;
-	CapList m_cap_list;
-	DetInfoCtrlObj m_det_info;
-	HwBufferCtrlObj*  m_bufferCtrlObj;
-	SyncCtrlObj m_sync;
-};
-
-} // namespace Xh
+	} // namespace Xh
 } // namespace lima
 
 #endif /* XHINTERFACE_H_ */

@@ -229,42 +229,46 @@ Camera(string hostname, int port, string configName);
 	void getNbScans(int& nb_scans);
 	void getTotalFrames(int& nframes);
 	void getMaxFrames(string& nframes);
+
+	void setRoi(const Roi& roi_to_set);
+	void getRoi(Roi& roi);
 	
 
-private:
-	// xh specific
-	XhClient *m_xh;
-	string m_hostname;
-	int m_port;
-	string m_configName;
-	string m_sysName;
+	private:
+		// xh specific
+		XhClient *m_xh;
+		string m_hostname;
+		int m_port;
+		string m_configName;
+		string m_sysName;
 
-	int m_uninterleave;
-	int m_npixels;
-	int m_nb_groups;
-	int m_openHandle;
+		int m_uninterleave;
+		int m_npixels;
+		int m_nb_groups;
+		int m_openHandle;
 
-	class AcqThread;
+		class AcqThread;
 
-	AcqThread *m_acq_thread;
-	TrigMode m_trigger_mode;
-	double m_exp_time;
-	ImageType m_image_type;
-	int m_nb_frames; // nos of frames to acquire
-	bool m_thread_running;
-	bool m_wait_flag;
-	bool m_quit;
-	int m_acq_frame_nb; // nos of frames acquired
-	mutable Cond m_cond;
-	XhTimingParameters m_timingParams;
-	int m_nb_scans;
-	int m_clock_mode;
-	//double timearray[3] ;
-	
-	// Buffer control object
-	SoftBufferCtrlObj m_bufferCtrlObj;
+		AcqThread *m_acq_thread;
+		TrigMode m_trigger_mode;
+		double m_exp_time;
+		ImageType m_image_type;
+		int m_nb_frames; // nos of frames to acquire
+		bool m_thread_running;
+		bool m_wait_flag;
+		bool m_quit;
+		int m_acq_frame_nb; // nos of frames acquired
+		mutable Cond m_cond;
+		XhTimingParameters m_timingParams;
+		int m_nb_scans;
+		int m_clock_mode;
+		//double timearray[3] ;
+		Roi m_roi;
+		
+		// Buffer control object
+		SoftBufferCtrlObj m_bufferCtrlObj;
 
-};
+	};
 
 } // namespace Xh
 } // namespace lima

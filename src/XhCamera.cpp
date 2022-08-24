@@ -61,7 +61,7 @@ private:
 //---------------------------
 
 Camera::Camera(string hostname, int port, string configName) : m_hostname(hostname), m_port(port), m_configName(configName),
-		m_sysName("'xh0'"), m_uninterleave(false), m_npixels(1024), m_image_type(Bpp32), m_nb_frames(0), m_acq_frame_nb(-1), m_bufferCtrlObj(){
+		m_sysName("'xh0'"), m_uninterleave(false), m_npixels(1024), m_image_type(Bpp32), m_nb_frames(1), m_acq_frame_nb(-1), m_exp_time(1.0), m_bufferCtrlObj(){
 	DEB_CONSTRUCTOR();
 
 //	DebParams::setModuleFlags(DebParams::AllFlags);
@@ -70,6 +70,7 @@ Camera::Camera(string hostname, int port, string configName) : m_hostname(hostna
 	m_acq_thread = new AcqThread(*this);
 	m_acq_thread->start();
 	m_xh = new XhClient();
+	setRoi(Roi(0,0,0,0));
 	init();
 }
 
@@ -292,13 +293,16 @@ void Camera::AcqThread::threadFunction() {
 				if (m_cam.m_image_type == Bpp16) {
 					npoints /= 2;
 				}
+
+				int width = m_cam.m_roi.getSize().getWidth() || npoints;
+				int start = m_cam.m_roi.getTopLeft().x;
 				//std::cout << "malloc " << nframes << " * " << npoints << std::endl; 
 				dptr = (int32_t*)malloc(nframes*npoints * sizeof(int32_t));
 				baseptr = dptr;
 				m_cam.readFrame(dptr, m_cam.m_acq_frame_nb, nframes);
 				for (int i=0; i<nframes; i++) {
 					int32_t* bptr = (int32_t*)buffer_mgr.getFrameBufferPtr(m_cam.m_acq_frame_nb);
-					memcpy(bptr,dptr,npoints*sizeof(int32_t));
+					memcpy(bptr, dptr + start, width*sizeof(int32_t));
 					dptr += npoints;
 					HwFrameInfoType frame_info;
 					frame_info.acq_frame_nb = m_cam.m_acq_frame_nb;
@@ -1165,6 +1169,17 @@ void Camera::syncClock() {
 void Camera::sendCommand(string cmd) {
 	DEB_MEMBER_FUNCT();
 	m_xh->sendWait(cmd);
+}
+
+void Camera::setRoi(const Roi& roi_to_set) {
+	DEB_MEMBER_FUNCT();
+	Roi roi = Roi(roi_to_set.getTopLeft().x, 0, roi_to_set.getSize().getWidth(), 0);
+	m_roi = roi;
+}
+
+void Camera::getRoi(Roi& roi) {
+	DEB_MEMBER_FUNCT();
+	roi = m_roi;
 }
 
 /**

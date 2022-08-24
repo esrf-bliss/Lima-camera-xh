@@ -26,32 +26,42 @@
 
 #include "XhInterface.h"
 #include "XhCamera.h"
+#include "XhDetInfoCtrlObj.h"
+#include "XhSyncCtrlObj.h"
+#include "XhRoiCtrlObj.h"
 
 using namespace lima;
 using namespace lima::Xh;
 
 Interface::Interface(Camera& cam) :
-		m_cam(cam), m_det_info(cam), m_sync(cam)
+		m_cam(cam)
 {
 	DEB_CONSTRUCTOR();
-	HwDetInfoCtrlObj *det_info = &m_det_info;
-	m_cap_list.push_back(det_info);
+	m_det_info = new DetInfoCtrlObj(cam);
+	m_sync = new SyncCtrlObj(cam);
+	m_roi = new RoiCtrlObj(cam);
+
+	// HwDetInfoCtrlObj *det_info = &m_det_info;
+	m_cap_list.push_back(m_det_info);
 
 	m_bufferCtrlObj = m_cam.getBufferCtrlObj();
 	HwBufferCtrlObj *buffer = m_cam.getBufferCtrlObj();
 	m_cap_list.push_back(buffer);
 
-	HwSyncCtrlObj *sync = &m_sync;
-	m_cap_list.push_back(sync);
+	// HwSyncCtrlObj *sync = &m_sync;
+	m_cap_list.push_back(m_sync);
 
-	m_sync.setNbFrames(1);
-	m_sync.setExpTime(1.0);
-	m_sync.setLatTime(0.0);
-	m_sync.setTrigMode(IntTrig);
+	// HwRoiCtrlObj *roi = &m_roi;
+	m_cap_list.push_back(m_roi);
+
+	// m_sync.setNbFrames(1);
+	// m_sync.setExpTime(1.0);
+	// m_sync.setLatTime(0.0);
+	// m_sync.setTrigMode(IntTrig);
 	Size image_size;
-	m_det_info.getMaxImageSize(image_size);
+	// m_det_info.getMaxImageSize(image_size);
 	ImageType image_type;
-	m_det_info.getDefImageType(image_type);
+	// m_det_info.getDefImageType(image_type);
 	FrameDim frame_dim(image_size, image_type);
 	m_bufferCtrlObj->setFrameDim(frame_dim);
 	m_bufferCtrlObj->setNbConcatFrames(1);
@@ -60,8 +70,9 @@ Interface::Interface(Camera& cam) :
 
 Interface::~Interface() {
 	DEB_DESTRUCTOR();
-	delete &m_det_info;
-	delete &m_sync;
+	delete m_det_info;
+	delete m_sync;
+	delete m_roi;
 }
 
 void Interface::getCapList(CapList &cap_list) const {
