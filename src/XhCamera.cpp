@@ -26,6 +26,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <math.h>
 #include <unistd.h>
@@ -806,6 +807,30 @@ void Camera::setHeadCaps(int capsAB, int capsCD, int head) {
 }
 
 /**
+ * Sets high voltage on
+ *
+ */
+void Camera::setHighVoltageOn() {
+	DEB_MEMBER_FUNCT();
+	stringstream cmd;
+	cmd << "xstrip hv enable " << m_sysName <<  " auto";
+	m_xh->sendWait(cmd.str());
+	cmd << "xstrip hv set-dac " << m_sysName <<  " -90";
+	m_xh->sendWait(cmd.str());
+}
+
+/**
+ * Sets high voltage of
+ *
+ */
+void Camera::setHighVoltageOff() {
+	DEB_MEMBER_FUNCT();
+	stringstream cmd;
+	cmd << "xstrip hv enable " << m_sysName <<  " off";
+	m_xh->sendWait(cmd.str());
+}
+
+/**
  * Set default timing parameters
  *
  * @param[out] timingParams  {@see Camera::XhTimingParameters}
@@ -814,7 +839,7 @@ void Camera::setDefaultTimingParameters(XhTimingParameters& timingParams) {
 	timingParams.trigControl=XhTrigIn_noTrigger;
 	timingParams.trigMux=-1;
 	timingParams.orbitMux = -1;
-	timingParams.lemoOut = 0;
+	timingParams.lemoOut = std::vector<int>();
 	timingParams.correctRounding = false;
 	timingParams.groupDelay = 0;
 	timingParams.frameDelay = 0;
@@ -894,8 +919,11 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 		cmd << " trig-mux " << timingParams.trigMux;
 	if (timingParams.orbitMux != -1)
 		cmd << " orbit-mux " << timingParams.orbitMux;
-	if (timingParams.lemoOut != 0)
-		cmd << " lemo-out " << timingParams.lemoOut;
+	if (!timingParams.lemoOut.empty()) {
+		std::stringstream lemosOut;
+		copy(timingParams.lemoOut.begin(), timingParams.lemoOut.end(), std::ostream_iterator<int>(lemosOut, "|")); 
+		cmd << " lemo-out " << lemosOut.str();
+	}
 	if (timingParams.correctRounding)
 		cmd << " correct-rounding";
 	if (timingParams.groupDelay != 0)
@@ -1195,7 +1223,7 @@ void Camera::sendCommand(string cmd) {
 }
 
 /**
- * Get the maximum number of frames programable wih the current XH configuration.
+ * Get the maximum number of frames programable with the current XH configuration.
  *
  * @param[out] nframes return the number of h/w configured time frames
  */
@@ -1664,6 +1692,392 @@ void Camera::getVoltage(int& voltage) {
 	// voltage = m_voltage;
 	DEB_RETURN() << DEB_VAR1(voltage);
 }
+/**
+ * Sets the input to wait for
+ *
+ * 9 - Software trigger
+ * 8 - main trigger, delayed orbit
+ * 0...7 - Lemo
+ * 
+ * @param[out] trigMux return the trigger input line number
+ */
+void Camera::setTrigMux(int trigMux) {
+	DEB_MEMBER_FUNCT();
+	if (trigMux == 9)
+		if (m_timingParams.trigControl & (Camera::XhTrigIn_groupTrigger | Camera::XhTrigIn_frameTrigger | Camera::XhTrigIn_scanTrigger)) {
+			m_timingParams.trigMux = trigMux;
+		} else {
+			THROW_HW_ERROR(Error) << "Cannot set trigger mux for current trigger mode";
+		}
+	if (8 >= trigMux >= 0) {
+		m_timingParams.trigMux = trigMux;
+	}
+	
+
+	DEB_TRACE() << "Set trig mux to" << trigMux;
+}
+
+void Camera::getTrigMux(int &trigMux) {
+	DEB_MEMBER_FUNCT();
+	trigMux = m_timingParams.trigMux;
+}
+
+/**
+ * Sets trigger orbit
+ *
+ * 0=direct
+ * 1=delayed
+ * 2=LVDS direct
+ * 3=LVDS delayed
+ * LEMO7 is reserved for the orbit trigger
+ * 
+ * @param[out] orbitMux return the orbit trigger
+ */
+void Camera::setOrbitTrig(int orbitMux) {
+	DEB_MEMBER_FUNCT();
+
+	if (3 >= orbitMux <= 0) {
+		m_timingParams.orbitMux = orbitMux;
+	} else {
+		THROW_HW_ERROR(Error) << "Invalid orbit mux value";
+	}
+}
+
+void Camera::getOrbitTrig(int &orbitMux) {
+	DEB_MEMBER_FUNCT();
+
+	orbitMux = m_timingParams.orbitMux;
+}
+
+/**
+ * Sets lemo out
+ *
+ * LEMO7 is reserved for the orbit trigger
+ * Lemo can be set as single integer value, or multiple values
+ * value is mapped to the lemo output. Mapping is done using binary coding
+ * where 2 bits are used for single output. When multiple values are provided
+ * binary OR is calculated and corresponding outputs are then activated
+ * 
+ * @param[out] lemoOut return the vector of lemoOuts
+ */
+void Camera::setLemoOut(std::vector<int> lemoOut) {
+	DEB_MEMBER_FUNCT();
+
+	std::cout << lemoOut.size() << std::endl;
+
+	m_timingParams.lemoOut = lemoOut;
+}
+
+void Camera::getLemoOut(std::vector<int>& lemoOut) {
+	DEB_MEMBER_FUNCT();
+	lemoOut = m_timingParams.lemoOut;
+}
+
+/**
+ * Sets correct rounding
+ * add/no add a rounding error to the frame delay
+ *
+ * 
+ * @param[out] correctRounding
+ */
+
+void Camera::setCorrectRounding(bool correctRounding) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.correctRounding = correctRounding;
+}
+
+void Camera::getCorrectRounding(bool& correctRounding) {
+	DEB_MEMBER_FUNCT();
+	correctRounding = m_timingParams.correctRounding;
+}
+
+
+/**
+ * Sets group delay
+ * delay is added before group
+ *
+ * 
+ * @param[out] groupDelay
+ */
+
+void Camera::setGroupDelay(int groupDelay) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.groupDelay = groupDelay;
+}
+
+void Camera::getGroupDelay(int& groupDelay) {
+	DEB_MEMBER_FUNCT();
+	groupDelay = m_timingParams.groupDelay;
+}
+
+/**
+ * Sets group delay
+ * delay is added before group
+ *
+ * 
+ * @param[out] frame
+ */
+
+void Camera::setFrameDelay(int frame) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.frameDelay = frame;
+}
+
+void Camera::getFrameDelay(int& frame) {
+	DEB_MEMBER_FUNCT();
+	frame = m_timingParams.frameDelay;
+}
+
+/**
+ * Sets scan period
+ * specifies scan to scan time in cloc cycles
+ *
+ * 
+ * @param[out] scanPeriod
+ */
+
+void Camera::setScanPeriod(int scanPeriod) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.scanPeriod = scanPeriod;
+}
+
+void Camera::getScanPeriod(int& scanPeriod) {
+	DEB_MEMBER_FUNCT();
+	scanPeriod = m_timingParams.scanPeriod;
+}
+
+/**
+ * Sets aux delay
+ *
+ * 
+ * @param[out] auxDelay
+ */
+
+void Camera::setAuxDelay(int auxDelay) {
+	// TODO: Don’t use in delayed mux reset from aux modes.
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.auxDelay = auxDelay;
+}
+
+void Camera::getAuxDelay(int& auxDelay) {
+	DEB_MEMBER_FUNCT();
+	auxDelay = m_timingParams.auxDelay;
+}
+
+/**
+ * Sets aux width
+ *
+ * 
+ * @param[out] auxWidth
+ */
+
+void Camera::setAuxWidth(int auxWidth) {
+	// TODO: Don’t use in delayed mux reset from aux modes. 
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.auxWidth = auxWidth;
+}
+
+void Camera::getAuxWidth(int& auxWidth) {
+	DEB_MEMBER_FUNCT();
+	auxWidth = m_timingParams.auxWidth;
+}
+
+/**
+ * Sets frame time
+ * Specify Frame time, calculate number of scans per frame if number of scans set to 0
+ * frame time is provided in cycles
+ *
+ * 
+ * @param[out] frameTime
+ */
+
+void Camera::setFrameTime(int frameTime) {
+	// Should refer to fremas count ?
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.frameTime = frameTime;
+}
+
+void Camera::getFrameTime(int& frameTime) {
+	DEB_MEMBER_FUNCT();
+	frameTime = m_timingParams.frameTime;
+}
+
+/**
+ * Sets shift down
+ * shift down data 0..4 bits for averaging
+ *
+ * 
+ * @param[out] shiftDown number of bits of right shift to divide total (default 4). 
+ */
+
+void Camera::setShiftDown(int shiftDown) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.shiftDown = shiftDown;
+}
+
+void Camera::getShiftDown(int& shiftDown) {
+	DEB_MEMBER_FUNCT();
+	shiftDown = m_timingParams.shiftDown;
+}
+
+/**
+ * Sets cycles start
+ *
+ * 
+ * @param[out] cyclesStart
+ */
+
+void Camera::setCyclesStart(int cyclesStart) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.cyclesStart = cyclesStart;
+}
+
+void Camera::getCyclesStart(int& cyclesStart) {
+	DEB_MEMBER_FUNCT();
+	cyclesStart = m_timingParams.cyclesStart;
+}
+
+
+/**
+ * Sets cycles end
+ *
+ * 
+ * @param[out] cyclesEnd
+ */
+
+void Camera::setCyclesEnd(int cyclesEnd) {
+	DEB_MEMBER_FUNCT();
+	if (minCycles <= cyclesEnd >= maxCycles) {
+		m_timingParams.cyclesEnd = cyclesEnd;
+	} else {
+		THROW_HW_ERROR(Error) << "value must be in range: " << minCycles << " to " << maxCycles;
+	}
+
+}
+
+void Camera::getCyclesEnd(int& cyclesEnd) {
+	DEB_MEMBER_FUNCT();
+	cyclesEnd = m_timingParams.cyclesEnd;
+}
+
+/**
+ * Sets s2 delay
+ *
+ * 
+ * @param[out] s1Delay
+ */
+
+void Camera::setS1Delay(int s1Delay) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.s1Delay = s1Delay;
+}
+
+void Camera::getS1Delay(int& s1Delay) {
+	DEB_MEMBER_FUNCT();
+	s1Delay = m_timingParams.s1Delay;
+}
+
+/**
+ * Sets s2 delay
+ *
+ * 
+ * @param[out] s2Delay
+ */
+
+void Camera::setS2Delay(int s2Delay) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.s2Delay = s2Delay;
+}
+
+void Camera::getS2Delay(int& s2Delay) {
+	DEB_MEMBER_FUNCT();
+	s2Delay = m_timingParams.s2Delay;
+}
+
+/**
+ * Sets xclk delay
+ *
+ * 
+ * @param[out] xclkDelay
+ */
+
+void Camera::setXclkDelay(int xclkDelay) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.xclkDelay = xclkDelay;
+}
+
+void Camera::getXclkDelay(int& xclkDelay) {
+	DEB_MEMBER_FUNCT();
+	xclkDelay = m_timingParams.xclkDelay;
+}
+
+/**
+ * Sets rst R delay
+ *
+ * 
+ * @param[out] rstRDelay
+ */
+
+void Camera::setRstRDelay(int rstRDelay) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.rstRDelay = rstRDelay;
+}
+
+void Camera::getRstRDelay(int& rstRDelay) {
+	DEB_MEMBER_FUNCT();
+	rstRDelay = m_timingParams.rstRDelay;
+}
+
+/**
+ * Sets rst F delay
+ *
+ * 
+ * @param[out] rstFDelay
+ */
+
+void Camera::setRstFDelay(int rstFDelay) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.rstFDelay = rstFDelay;
+}
+
+void Camera::getRstFDelay(int& rstFDelay) {
+	DEB_MEMBER_FUNCT();
+	rstFDelay = m_timingParams.rstFDelay;
+}
+
+/**
+ * Allow excess
+ * Allow programming of more frame than will fit in DRAM
+ *
+ * 
+ * @param[out] allowExcess
+ */
+
+void Camera::setAllowExcess (bool allowExcess) {
+	DEB_MEMBER_FUNCT();
+
+	m_timingParams.allowExcess  = allowExcess;
+}
+
+void Camera::getAllowExcess (bool& allowExcess) {
+	DEB_MEMBER_FUNCT();
+	allowExcess  = m_timingParams.allowExcess;
+}
+
 /**
  * Shutdown the detector in a controlled manner
  *

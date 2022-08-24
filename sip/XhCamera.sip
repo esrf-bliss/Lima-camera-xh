@@ -145,7 +145,7 @@ namespace Xh
 		Xh::Camera::TriggerControlType trigControl;	///> Trigger control {@see #Camera::TriggerControlType}
 		int trigMux;					///> Trigger Mux select (Lemo0..7, 8=delayed orbit, 9 = Software)
 		int orbitMux;					///> Orbit mux trigger select (0=direct, 1=delays 2..3 future)
-		int lemoOut;					///> Signals for 8 Lemo outputs (binary coded 0..255 for simple use)
+		std::vector<int> lemoOut;		///> Signals for 8 Lemo outputs (binary coded 0..255 for simple use)
 		bool correctRounding;			///> Adjust group & frame delay to exactly match the frame time
 		int groupDelay;					///> Delay to add before group
 		int frameDelay;					///> Delay to add at before each frame
@@ -203,6 +203,9 @@ namespace Xh
 
 	void setOffsets(int first, int num, int value, bool direct=false);
 	void syncClock();
+
+	void setHighVoltageOn();
+	void setHighVoltageOff();
 
 	void readFrame(void* ptr, int frame_nb, int nframes);
 
