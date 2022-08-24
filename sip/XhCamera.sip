@@ -145,7 +145,7 @@ namespace Xh
 		Xh::Camera::TriggerControlType trigControl;	///> Trigger control {@see #Camera::TriggerControlType}
 		int trigMux;					///> Trigger Mux select (Lemo0..7, 8=delayed orbit, 9 = Software)
 		int orbitMux;					///> Orbit mux trigger select (0=direct, 1=delays 2..3 future)
-		int lemoOut;					///> Signals for 8 Lemo outputs (binary coded 0..255 for simple use)
+		std::vector<int> lemoOut;		///> Signals for 8 Lemo outputs (binary coded 0..255 for simple use)
 		bool correctRounding;			///> Adjust group & frame delay to exactly match the frame time
 		int groupDelay;					///> Delay to add before group
 		int frameDelay;					///> Delay to add at before each frame
@@ -203,7 +203,67 @@ namespace Xh
 	void setOffsets(int first, int num, int value, bool direct=false);
 	void syncClock();
 
+	void setHighVoltageOn();
+	void setHighVoltageOff();
+
 	void readFrame(void* ptr, int frame_nb, int nframes);
+
+	void setTrigMux(int trigMux);
+	void getTrigMux(int& trigMux);
+
+	void setOrbitTrig(int orbitMux);
+	void getOrbitTrig(int &orbitMux);
+
+	void setLemoOut(std::vector<int> lemoOut);
+	void getLemoOut(std::vector<int>& lemoOut);
+
+	void setCorrectRounding(bool correctRounding);
+	void getCorrectRounding(bool& correctRounding);
+
+	void setGroupDelay(int groupDelay);
+	void getGroupDelay(int& groupDelay);
+
+	void setFrameDelay(int frame);
+	void getFrameDelay(int& frame);
+
+	void setScanPeriod(int scanPeriod);
+	void getScanPeriod(int& scanPeriod);
+
+	void setAuxDelay(int auxDelay);
+	void getAuxDelay(int& auxDelay);
+
+	void setAuxWidth(int auxWidth);
+	void getAuxWidth(int& auxWidth);
+
+	void setFrameTime(int frameTime);
+	void getFrameTime(int& frameTime);
+
+	void setShiftDown(int shiftDown);
+	void getShiftDown(int& shiftDown);
+
+	void setCyclesStart(int cyclesStart);
+	void getCyclesStart(int& cyclesStart);
+
+	void setCyclesEnd(int cyclesEnd);
+	void getCyclesEnd(int& cyclesEnd);
+
+	void setS1Delay(int s1Delay);
+	void getS1Delay(int& s1Delay);
+	
+	void setS2Delay(int s2Delay);
+	void getS2Delay(int& s2Delay);
+
+	void setXclkDelay(int xclkDelay);
+	void getXclkDelay(int& xclkDelay);
+
+	void setRstRDelay(int rstRDelay);
+	void getRstRDelay(int& rstRDelay);
+
+	void setRstFDelay(int rstFDelay);
+	void getRstFDelay(int& rstFDelay);
+
+	void setAllowExcess(bool allowExcess);
+	void getAllowExcess(bool& allowExcess);
 
 	void setNbScans(int nb_scans);
 	void getNbScans(int& nb_scans /Out/);
