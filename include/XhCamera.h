@@ -162,6 +162,19 @@ Camera(string hostname, int port, string configName);
 		XhTrigIn_fallingTrigger = 0x40	///>
 	};
 
+	typedef map <TriggerControlType, std::string> TriggerNamesMap;
+
+	TriggerNamesMap triggerNames = {
+		{XhTrigIn_noTrigger, "No trigger"},
+		{XhTrigIn_groupTrigger, "Group trigger"},
+		{XhTrigIn_frameTrigger, "Frame trigger"},
+		{XhTrigIn_scanTrigger, "Scan trigger"},
+		{XhTrigIn_groupOrbit, "Group orbit"},
+		{XhTrigIn_frameOrbit, "Frame orbit"},
+		{XhTrigIn_scanOrbit, "Scan orbit"},
+		{XhTrigIn_fallingTrigger, "Falling trigger"},
+	};
+
 	struct XhTimingParameters {
 	public:
 		TriggerControlType trigControl;	///> Trigger control {@see #Camera::TriggerControlType}
@@ -205,6 +218,7 @@ Camera(string hostname, int port, string configName);
 	void setHeadCaps(int capsAB, int capsCD, int head=-1);
 	void setCalEn(bool onOff, int head=-1);
 	void listAvailableCaps(int* capValues, int& num, bool& alt_cd);
+	void getAvailableTriggerModes(std::vector<std::string> &trigger_list);
 
 	void setDefaultTimingParameters(XhTimingParameters& timingParams);
 	void setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last, const XhTimingParameters& timingParams);
@@ -232,6 +246,9 @@ Camera(string hostname, int port, string configName);
 	void getNbScans(int& nb_scans);
 	void getTotalFrames(int& nframes);
 	void getMaxFrames(string& nframes);
+
+	void getNbGroups(int& nb_groups);
+	void setNbGroups(int nb_groups);
 
 	void setTrigMux(int trigMux);
 	void getTrigMux(int& trigMux);
@@ -290,6 +307,12 @@ Camera(string hostname, int port, string configName);
 	void setAllowExcess(bool allowExcess);
 	void getAllowExcess(bool& allowExcess);
 
+	void setCustomTriggerMode(std::string trig_mode);
+	void getCustomTriggerMode(std::string& trig_mode);
+
+	void setVoltage(int voltage);
+	void getVoltage(int& voltage);
+
 private:
 	// xh specific
 	XhClient *m_xh;
@@ -326,6 +349,7 @@ private:
 	int maxCycles = 3;
 	int minCycles = 0;
 
+	int m_voltage;
 };
 
 } // namespace Xh

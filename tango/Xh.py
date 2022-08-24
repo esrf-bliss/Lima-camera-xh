@@ -126,6 +126,18 @@ class Xh(PyTango.Device_4Impl):
 		
 #==================================================================
 #
+#    setHeadCaps command
+#
+#==================================================================
+    @Core.DEB_MEMBER_FUNCT
+    def getAvailableCaps(self):
+        capsList = []
+        _XhCam.listAvailableCaps(capsList)
+        
+        return capsList
+
+#==================================================================
+#
 #    setCommand command
 #
 #==================================================================
@@ -251,6 +263,9 @@ class XhClass(PyTango.DeviceClass):
          [[PyTango.DevFloat, "caps AB"],
          [PyTango.DevFloat, "caps CD"],
          [PyTango.DevBool, "head"]],
+         'getAvailableTriggerModes':
+         [[PyTango.DevVoid, ""],
+         [PyTango.DevVoid, ""]],
         }
 		
     attr_list = {
@@ -259,6 +274,10 @@ class XhClass(PyTango.DeviceClass):
 	PyTango.SCALAR,
 	PyTango.WRITE]],
        	'nbscans':
+	[[PyTango.DevLong,
+	PyTango.SCALAR,
+	PyTango.READ_WRITE]],
+        'nbgroups':
 	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ_WRITE]],
@@ -306,6 +325,14 @@ class XhClass(PyTango.DeviceClass):
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
+        'customTriggerMode':
+    [[PyTango.DevString,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'availableCaps':
+    [[PyTango.DevVarStringArray,
+    PyTango.SPECTRUM,
+    PyTango.READ]]
     }
 
     def __init__(self,name) :

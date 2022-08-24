@@ -184,6 +184,7 @@ namespace Xh
 	void setCalEn(bool onOff, int head=-1);
 	//mcd
 	void listAvailableCaps(int* capValues /Out/, int& num /Out/, bool& alt_cd /Out/);
+	void getAvailableTriggerModes(std::vector<std::string> &trigger_list /Out/);
 	
 	void setDefaultTimingParameters(XhTimingParameters& timingParams);
 	void setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last, const XhTimingParameters& timingParams);
@@ -265,9 +266,17 @@ namespace Xh
 	void setAllowExcess(bool allowExcess);
 	void getAllowExcess(bool& allowExcess);
 
+	void setCustomTriggerMode(std::string trig_mode);
+	void getCustomTriggerMode(std::string& trig_mode);
+
+	void setVoltage(int voltage);
+	void getVoltage(int& voltage);
+
 	void setNbScans(int nb_scans);
 	void getNbScans(int& nb_scans /Out/);
-        void getMaxFrames(std::string& nframes /Out/);
+    void getMaxFrames(std::string& nframes /Out/);
+	void getNbGroups(int& nb_groups /Out/);
+	void setNbGroups(int nb_groups);
 	
   private:
 	Camera(const Xh::Camera&);
