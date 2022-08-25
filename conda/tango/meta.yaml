@@ -18,6 +18,8 @@ build:
 
 requirements:
   build:
+    - make
+    - ninja
     - cmake
     - git
     - lima-core
