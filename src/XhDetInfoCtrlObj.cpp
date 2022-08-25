@@ -6,7 +6,7 @@
  */
 
 #include <cstdlib>
-#include "XhInterface.h"
+#include "XhDetInfoCtrlObj.h"
 #include "XhCamera.h"
 
 using namespace lima;
