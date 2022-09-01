@@ -74,7 +74,7 @@ namespace lima {
 						int completed_frames;	///< The number of frames completed, only valid when not {@link #Idle}
 				};
 
-				Camera(string hostname, int port, string configName);
+				Camera(string hostname, int port, string configName, std::vector<std::string> XH_TIMING_SCRIPT);
 				~Camera();
 
 				void init();
@@ -165,14 +165,14 @@ namespace lima {
 				typedef map <TriggerControlType, std::string> TriggerNamesMap;
 
 				TriggerNamesMap triggerNames = {
-					{XhTrigIn_noTrigger, "No trigger"},
-					{XhTrigIn_groupTrigger, "Group trigger"},
-					{XhTrigIn_frameTrigger, "Frame trigger"},
-					{XhTrigIn_scanTrigger, "Scan trigger"},
-					{XhTrigIn_groupOrbit, "Group orbit"},
-					{XhTrigIn_frameOrbit, "Frame orbit"},
-					{XhTrigIn_scanOrbit, "Scan orbit"},
-					{XhTrigIn_fallingTrigger, "Falling trigger"},
+					{XhTrigIn_noTrigger, "no_trigger"},
+					{XhTrigIn_groupTrigger, "group_trigger"},
+					{XhTrigIn_frameTrigger, "frame_trigger"},
+					{XhTrigIn_scanTrigger, "scan_trigger"},
+					{XhTrigIn_groupOrbit, "group_orbit"},
+					{XhTrigIn_frameOrbit, "frame_orbit"},
+					{XhTrigIn_scanOrbit, "scan_orbit"},
+					{XhTrigIn_fallingTrigger, "falling_trigger"},
 				};
 
 				struct XhTimingParameters {
@@ -217,7 +217,7 @@ namespace lima {
 				void getHeadAdc(double& value, int head, HeadVoltageType voltageType);
 				void setHeadCaps(int capsAB, int capsCD, int head=-1);
 				void setCalEn(bool onOff, int head=-1);
-				void listAvailableCaps(int* capValues, int& num, bool& alt_cd);
+				void listAvailableCaps(std::vector<int>& capValues, bool& alt_cd);
 				void getAvailableTriggerModes(std::vector<std::string> &trigger_list);
 
 				void setDefaultTimingParameters(XhTimingParameters& timingParams);
@@ -272,7 +272,7 @@ namespace lima {
 				void getScanPeriod(int& scanPeriod);
 
 				void setAuxDelay(int auxDelay);
-				void getAuxDelay(int& auxDelay);
+				void getAuxDelay(int& auxDelay) const;
 
 				void setAuxWidth(int auxWidth);
 				void getAuxWidth(int& auxWidth);
@@ -315,6 +315,9 @@ namespace lima {
 
 				void setRoi(const Roi& roi_to_set);
 				void getRoi(Roi& roi);
+				void checkRoi(const Roi& set_roi, Roi& hw_roi);
+
+				void setXhTimingScript(string script);
 			
 
 			private:
@@ -352,9 +355,14 @@ namespace lima {
 				int minCycles = 0;
 
 				int m_voltage;
+
+				std::vector<std::string> m_xh_timing_scripts;
 				
 				// Buffer control object
 				SoftBufferCtrlObj m_bufferCtrlObj;
+
+				//utils
+				std::string join(std::vector<int>::const_iterator begin, std::vector<int>::const_iterator last, const std::string &delimeter="|");
 
 			};
 	} // namespace Xh

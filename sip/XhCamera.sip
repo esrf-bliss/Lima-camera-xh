@@ -52,7 +52,7 @@ namespace Xh
 	};
 
 
-	Camera(std::string hostname, int port, std::string configName);
+	Camera(std::string hostname, int port, std::string configName, std::vector<std::string> XH_TIMING_SCRIPT);
 	~Camera();
 
 	void init();
@@ -91,7 +91,13 @@ namespace Xh
 	void setNbFrames(int nb_frames);
 	void getNbFrames(int& nb_frames /Out/);
 
+	void setRoi(const Roi& roi_to_set);
+	void getRoi(Roi& roi /Out/);
+	void checkRoi(const Roi& set_roi, Roi& hw_roi /Out/);
+
 	bool isAcqRunning() const;
+
+	void setXhTimingScript(std::string script);
 
 	///////////////////////////
 	// -- xh specific functions
@@ -183,7 +189,7 @@ namespace Xh
 	void setHeadCaps(int capsAB, int capsCD, int head=-1);
 	void setCalEn(bool onOff, int head=-1);
 	//mcd
-	void listAvailableCaps(int* capValues /Out/, int& num /Out/, bool& alt_cd /Out/);
+	void listAvailableCaps(std::vector<int>& capValues /Out/, bool& alt_cd /Out/);
 	void getAvailableTriggerModes(std::vector<std::string> &trigger_list /Out/);
 	
 	void setDefaultTimingParameters(XhTimingParameters& timingParams);
@@ -231,7 +237,7 @@ namespace Xh
 	void getScanPeriod(int& scanPeriod);
 
 	void setAuxDelay(int auxDelay);
-	void getAuxDelay(int& auxDelay);
+	void getAuxDelay(int& auxDelay /Out/) const;
 
 	void setAuxWidth(int auxWidth);
 	void getAuxWidth(int& auxWidth);

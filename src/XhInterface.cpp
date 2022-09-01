@@ -58,14 +58,15 @@ Interface::Interface(Camera& cam) :
 	// m_sync.setExpTime(1.0);
 	// m_sync.setLatTime(0.0);
 	// m_sync.setTrigMode(IntTrig);
-	Size image_size;
-	// m_det_info.getMaxImageSize(image_size);
-	ImageType image_type;
-	// m_det_info.getDefImageType(image_type);
-	FrameDim frame_dim(image_size, image_type);
-	m_bufferCtrlObj->setFrameDim(frame_dim);
-	m_bufferCtrlObj->setNbConcatFrames(1);
-	m_bufferCtrlObj->setNbBuffers(2);
+	// Size image_size;
+	// m_det_info->getMaxImageSize(image_size);
+	// ImageType image_type;
+	// m_det_info->getDefImageType(image_type);
+	// std::cout << image_size << " " << image_type;
+	// FrameDim frame_dim(image_size);
+	// m_bufferCtrlObj->setFrameDim(frame_dim);
+	// m_bufferCtrlObj->setNbConcatFrames(1);
+	// m_bufferCtrlObj->setNbBuffers(2);
 }
 
 Interface::~Interface() {

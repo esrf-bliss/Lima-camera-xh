@@ -63,12 +63,26 @@ class Xh(PyTango.Device_4Impl):
     def __init__(self,*args) :
         PyTango.Device_4Impl.__init__(self,*args)
 
-        self.init_device()
 	
         self.__clockmode = {'XhInternalClock': 0,
 			    'XhESRF5468Mhz': 1,
 			    'XhESRF1136Mhz': 2}
+
+        self.__Attribute2FunctionBase = {
+            'aux_delay': 'AuxDelay',
+            'trig_mux': 'TrigMux',
+            'orbit_trigger': 'OrbitTrig',
+            'correct_rounding': 'CorrectRounding',
+            'group_delay': 'GroupDelay',
+            'frame_delay': 'FrameDelay',
+            'scan_period': 'ScanPeriod',
+            'aux_delay': 'AuxDelay',
+            'aux_width': 'AuxWidth',
+            'nb_groups': 'NbGroups',
+            'temperature': 'Temperature'
+        }
 			    
+        self.init_device()
 
 #------------------------------------------------------------------
 #    Device destructor
@@ -131,9 +145,7 @@ class Xh(PyTango.Device_4Impl):
 #==================================================================
     @Core.DEB_MEMBER_FUNCT
     def getAvailableCaps(self):
-        capsList = []
-        _XhCam.listAvailableCaps(capsList)
-        
+        capsList, _ = _XhCam.listAvailableCaps() 
         return capsList
 
 #==================================================================
@@ -148,7 +160,91 @@ class Xh(PyTango.Device_4Impl):
         print (cmd)
 	
         _XhCam.sendCommand(cmd)
+
+#==================================================================
+#
+#    setHighVoltageOn command
+#
+#==================================================================
+    @Core.DEB_MEMBER_FUNCT
+    def setHighVoltageOn(self):	
+        _XhCam.setHighVoltageOn()
+
+
+#==================================================================
+#
+#    setHighVoltageOff command
+#
+#==================================================================
+    @Core.DEB_MEMBER_FUNCT
+    def setHighVoltageOff(self):	
+        _XhCam.setHighVoltageOff()
 		
+
+#==================================================================
+#
+#    setHeadDac command
+#
+#==================================================================
+    @Core.DEB_MEMBER_FUNCT
+    def setHeadDac(self,argin):
+        _value = argin[0]
+        _type = argin[1]
+        _head = argin[2]
+        _direct = argin[3]
+	
+        _XhCam.setHeadDac(_value, _type, _head, _direct)
+
+
+#==================================================================
+#
+#    getAvailableTriggerModes command
+#
+#==================================================================
+    @Core.DEB_MEMBER_FUNCT
+    def getAvailableTriggerModes(self):	
+        return _XhCam.getAvailableTriggerModes()
+
+
+#==================================================================
+#
+#    setXhTimingScript command
+#
+#==================================================================
+
+    @Core.DEB_MEMBER_FUNCT
+    def setXhTimingScript(self, argin):
+        """ Set timing script
+        :param argin: script name
+        """
+        return _XhCam.setXhTimingScript(argin)
+
+
+#==================================================================
+#
+#   getTemperature command
+#   argin: channel number
+#
+#==================================================================
+
+    @Core.DEB_MEMBER_FUNCT
+    def getTemperature(self, argin):
+        return  _XhCam.getTemperature(int(argin))
+
+
+#==================================================================
+#
+#   setTimingOrbit command
+#   argin[0]: delay
+#   argin[1]: falling edge
+#
+#==================================================================
+    @Core.DEB_MEMBER_FUNCT
+    def setTimingOrbit(self, argin):
+        delay = int(argin[0])
+        falling_edge = bool(argin[1])
+        return _XhCam.setTimingOrbit(delay, falling_edge)
+
 #==================================================================
 #
 #    Xh read/write attribute methods
@@ -156,8 +252,11 @@ class Xh(PyTango.Device_4Impl):
 #==================================================================
 
 
-    def __getattr__(self,name) :
-        return AttrHelper.get_attr_4u(self, name, _XhInterface)
+    def __getattr__(self,name):
+        try:
+            return AttrHelper.get_attr_4u(self, name, _XhInterface)
+        except:
+            return AttrHelper.get_attr_4u(self, name, _XhCam)
 	
 	
 
@@ -214,6 +313,39 @@ class Xh(PyTango.Device_4Impl):
 
 
 #------------------------------------------------------------------
+#    read lemoout:
+#
+#    Description: reads the lemoout 
+#------------------------------------------------------------------	
+
+    def read_lemo_out(self, attr):
+        lemosout = []
+        _XhCam.getLemoOut(lemosout)
+        attr.set_value(lemosout)
+
+#------------------------------------------------------------------
+#    write lemoout:
+#
+#    Description: writes the lemoout 
+#------------------------------------------------------------------	
+
+    def write_lemo_out(self, attr):
+        data = attr.get_write_value()
+        data = [int(el) for el in data]
+        _XhCam.setLemoOut(data)
+
+#------------------------------------------------------------------
+#    write custom trigger mode:
+#
+#    Description: writes the custom trigger mode 
+#    argin: DevString   
+#------------------------------------------------------------------	
+
+    def write_custom_trigger_mode(self, argin):
+        data = argin.get_write_value()
+        _XhCam.setCustomTriggerMode(data)
+
+#------------------------------------------------------------------
 #------------------------------------------------------------------
 #    class XhClass
 #------------------------------------------------------------------
@@ -233,40 +365,68 @@ class XhClass(PyTango.DeviceClass):
         'config_name':
         [PyTango.DevString,
          "The default configuration loaded",[]],
+        'XH_TIMING_SCRIPT':
+        [PyTango.DevVarStringArray,
+        "Timing scripts",
+        ['config_timing_1turn',
+        'config_timing_2turn',
+        'config_timing_3turn',
+        'config_timing_4turn',
+        'config_timing_3turn_no_overlap',
+        'config_timing_4turn_no_overlap',
+        'config_timing_2turn_4bunch',
+        'config_timing_2turn_16bunch',
+        'config_timing_2turn_4bunch_no',
+        'config_timing_2turn_16bunch_no',
+        'config_timing_3turn_4bunch',
+        'config_timing_3turn_16bunch',
+        'config_timing_4turn_4bunch',
+        'config_timing_4turn_16bunch',
+        'config_timing_5turn_4bunch',
+        'config_timing_5turn_16bunch',
+        ]]
         }
 
     cmd_list = {
         'getAttrStringValueList':
         [[PyTango.DevString, "Attribute name"],
-         [PyTango.DevVarStringArray, "Authorized String value list"]],
+            [PyTango.DevVarStringArray, "Authorized String value list"]],
         'reset':
         [[PyTango.DevVoid, ""],
-         [PyTango.DevVoid, ""]],
+            [PyTango.DevVoid, ""]],
         'setHeadCaps':
         [[PyTango.DevVarULongArray, "Caps for AB, Caps for CD"],
-         [PyTango.DevVoid, ""]],
+            [PyTango.DevVoid, ""]],
         'sendCommand':
         [[PyTango.DevString, "da.server command"],
-         [PyTango.DevVoid, ""]],
-         'setHighVoltageOn':
-         [[PyTango.DevVoid, ""],
-         [PyTango.DevVoid, ""]],
-         'setHighVoltageOff':
-         [[PyTango.DevVoid, ""],
-         [PyTango.DevVoid, ""]],
-         'setHeadDac':
-         [[PyTango.DevFloat, "value"],
-         [PyTango.DevString, "type: XhVdd, XhVref, XhVrefc, XhVres1, XhVres2, XhVpupref, XhVclamp, XhVled"],
-         [PyTango.DevFloat, "head"],
-         [PyTango.DevBool, "direct"]],
-         'setHeadCaps':
-         [[PyTango.DevFloat, "caps AB"],
-         [PyTango.DevFloat, "caps CD"],
-         [PyTango.DevBool, "head"]],
-         'getAvailableTriggerModes':
-         [[PyTango.DevVoid, ""],
-         [PyTango.DevVoid, ""]],
-        }
+            [PyTango.DevVoid, ""]],
+        'setHighVoltageOn':
+        [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""]],
+        'setHighVoltageOff':
+        [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""]],
+        'setHeadDac':
+        [[PyTango.DevFloat, "value"], 
+            [PyTango.DevVoid, ""]],
+        'getAvailableCaps':
+        [[PyTango.DevVoid, ""],
+            [PyTango.DevVarShortArray, "available caps"]],
+        'getAvailableTriggerModes':
+        [[PyTango.DevVoid, ""],
+            [PyTango.DevVarStringArray, "Trigger modes"]],
+        'setXhTimingScript':
+        [[PyTango.DevString, "Script name"],
+            [PyTango.DevVoid, ""]],
+        'getTemperature':
+        [[PyTango.DevString, "Channel number"],
+            [PyTango.DevFloat, ""]],
+        'setTimingOrbit': [[
+            PyTango.DevVarULongArray, "Array containing two elements, first corresponds to delay (int), second (bool, 0/1) tells if falling edge is used"
+        ], [
+            PyTango.DevVoid, ""
+        ]]
+    }
 		
     attr_list = {
        	'clockmode':
@@ -277,7 +437,7 @@ class XhClass(PyTango.DeviceClass):
 	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ_WRITE]],
-        'nbgroups':
+        'nb_groups':
 	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ_WRITE]],
@@ -285,54 +445,46 @@ class XhClass(PyTango.DeviceClass):
 	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ]],
-        'temperature':
-	[[PyTango.DevString,
-	PyTango.SCALAR,
-	PyTango.WRITE]],
-       'trigMux':
+       'trig_mux':
 	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ_WRITE]],
-        'orbitTrigger':
+        'orbit_trigger':
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
-        'lemoOut':
+        'lemo_out':
     [[PyTango.DevLong,
-    PyTango.SCALAR,
-    PyTango.READ_WRITE]],
-        'correctRounding':
+    PyTango.SPECTRUM,
+    PyTango.READ_WRITE, 1024]],
+        'correct_rounding':
     [[PyTango.DevBoolean,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
-        'groupDelay':
+        'group_delay':
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
-        'frameDelay':
+        'frame_delay':
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
-        'scanPeriod':
+        'scan_period':
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
-        'auxDelay':
+        'aux_delay':
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
-          'auxWidth':
+        'aux_width':
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
-        'customTriggerMode':
+        'custom_trigger_mode':
     [[PyTango.DevString,
     PyTango.SCALAR,
-    PyTango.READ_WRITE]],
-        'availableCaps':
-    [[PyTango.DevVarStringArray,
-    PyTango.SPECTRUM,
-    PyTango.READ]]
+    PyTango.WRITE]]
     }
 
     def __init__(self,name) :
@@ -349,15 +501,18 @@ class XhClass(PyTango.DeviceClass):
 _XhCam = None
 _XhInterface = None
 
-def get_control(cam_ip_address = "0",port = 1972,config_name = 'config',**keys) :
+def get_control(cam_ip_address = "0", port = 1972, config_name = 'config', XH_TIMING_SCRIPT = [], **keys) :
     global _XhCam
     global _XhInterface
+    
     if _XhCam is None:
         print (cam_ip_address)
         print (port)
         print (config_name)
-#	Core.DebParams.setTypeFlags(Core.DebParams.AllFlags)
-        _XhCam = XhAcq.Camera(cam_ip_address,int(port),config_name)
+        #	Core.DebParams.setTypeFlags(Core.DebParams.AllFlags)
+        # XH_TIMING_SCRIPT must be converted to list of strings. By default the type is StdStringArray which is not consumed in cpp
+        # when argument type is std::vector<std::string>
+        _XhCam = XhAcq.Camera(cam_ip_address, int(port), config_name, list(XH_TIMING_SCRIPT))
         _XhInterface = XhAcq.Interface(_XhCam)
     return Core.CtControl(_XhInterface)
 

@@ -61,13 +61,14 @@ private:
 // @brief  Ctor
 //---------------------------
 
-Camera::Camera(string hostname, int port, string configName) : m_hostname(hostname), m_port(port), m_configName(configName),
-		m_sysName("'xh0'"), m_uninterleave(false), m_npixels(1024), m_image_type(Bpp32), m_nb_frames(1), m_acq_frame_nb(-1), m_exp_time(1.0), m_bufferCtrlObj(){
+Camera::Camera(string hostname, int port, string configName, std::vector<std::string> XH_TIMING_SCRIPT) : m_hostname(hostname), m_port(port), m_configName(configName),
+		m_sysName("'xh0'"), m_uninterleave(false), m_nb_groups(1), m_npixels(1024), m_image_type(Bpp32), m_nb_frames(1), m_acq_frame_nb(-1), m_exp_time(1.0), m_bufferCtrlObj(){
 	DEB_CONSTRUCTOR();
 
 //	DebParams::setModuleFlags(DebParams::AllFlags);
 //	DebParams::setTypeFlags(DebParams::AllFlags);
 //	DebParams::setFormatFlags(DebParams::AllFlags);
+	m_xh_timing_scripts = XH_TIMING_SCRIPT;
 	m_acq_thread = new AcqThread(*this);
 	m_acq_thread->start();
 	m_xh = new XhClient();
@@ -303,7 +304,8 @@ void Camera::AcqThread::threadFunction() {
 					npoints /= 2;
 				}
 
-				int width = m_cam.m_roi.getSize().getWidth() || npoints;
+				int width = m_cam.m_roi.getSize().getWidth();
+				width = width ? width : npoints;
 				int start = m_cam.m_roi.getTopLeft().x;
 				//std::cout << "malloc " << nframes << " * " << npoints << std::endl; 
 				dptr = (int32_t*)malloc(nframes*npoints * sizeof(int32_t));
@@ -312,6 +314,7 @@ void Camera::AcqThread::threadFunction() {
 				for (int i=0; i<nframes; i++) {
 					int32_t* bptr = (int32_t*)buffer_mgr.getFrameBufferPtr(m_cam.m_acq_frame_nb);
 					memcpy(bptr, dptr + start, width*sizeof(int32_t));
+					// memcpy(bptr, dptr, npoints*sizeof(int32_t));
 					dptr += npoints;
 					HwFrameInfoType frame_info;
 					frame_info.acq_frame_nb = m_cam.m_acq_frame_nb;
@@ -672,10 +675,10 @@ void Camera::enableHv(bool enable, bool overtemp, bool force) {
  * @param[out] num The number of values
  * @param[out] alt_cd Specifies whether there is alternative CD
  */
-void Camera::listAvailableCaps(int* capValues, int& num, bool& alt_cd) {
+void Camera::listAvailableCaps(std::vector<int>& capValues, bool& alt_cd) {
 	DEB_MEMBER_FUNCT();
 	stringstream cmd;
-// example of capStr = "2 5 7 10 12 15 17 20 22 25 27 30 32 35 37 40 alternate-cd=1"
+	// example of capStr = "2 5 7 10 12 15 17 20 22 25 27 30 32 35 37 40 alternate-cd=1"
 	string capStr;
 	cmd << "xstrip head list-caps " << m_sysName;
 	m_xh->sendWait(cmd.str(), capStr);
@@ -684,14 +687,11 @@ void Camera::listAvailableCaps(int* capValues, int& num, bool& alt_cd) {
 	pos = capStr.find("=");
 	alt_cd = atoi(capStr.substr(pos+1).c_str());
 	pos2 = capStr.find("alt");
-	num = 0;
 	while (curpos < pos2) {
 		pos = capStr.find(" ", curpos);		// position of " " in capStr
-		capValues[num] = atoi(capStr.substr(curpos, pos-curpos).c_str());
+		capValues.push_back(atoi(capStr.substr(curpos, pos-curpos).c_str()));
 		curpos = pos+1;
-		num++;
 	}
-
 }
 
 /**
@@ -864,6 +864,17 @@ void Camera::setDefaultTimingParameters(XhTimingParameters& timingParams) {
 	
 }
 
+
+std::string Camera::join(std::vector<int>::const_iterator begin, std::vector<int>::const_iterator last, const std::string& delimeter) {
+	std::ostringstream result;
+	if (begin != last) {
+		result << *begin;
+		while (++begin != last)
+			result << delimeter << *begin;
+	}
+
+	return result.str();
+}
 /**
  * Setup a single timing group.
  *
@@ -924,9 +935,8 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 	if (timingParams.orbitMux != -1)
 		cmd << " orbit-mux " << timingParams.orbitMux;
 	if (!timingParams.lemoOut.empty()) {
-		std::stringstream lemosOut;
-		copy(timingParams.lemoOut.begin(), timingParams.lemoOut.end(), std::ostream_iterator<int>(lemosOut, "|")); 
-		cmd << " lemo-out " << lemosOut.str();
+		std::string lemosCmd = Camera::join(timingParams.lemoOut.begin(), timingParams.lemoOut.end());
+		cmd << " lemo-out " << lemosCmd;
 	}
 	if (timingParams.correctRounding)
 		cmd << " correct-rounding";
@@ -964,6 +974,7 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 		cmd << " allow-excess";
 
 	int num_frames;
+	std::cout << cmd.str() << std::endl;
 	m_xh->sendWait(cmd.str(), num_frames);
 
 
@@ -1177,6 +1188,7 @@ void Camera::getSetpoint(int channel, double& value) {
  */
 void Camera::getTemperature(int channel, double& value) {
 	DEB_MEMBER_FUNCT();
+	std::cout << "GETTEMP" << std::endl;
 	stringstream cmd;
 	cmd << "xstrip tc get " << m_sysName <<  " ch " << channel << " t";
 	m_xh->sendWait(cmd.str(), value);
@@ -1228,6 +1240,9 @@ void Camera::sendCommand(string cmd) {
 
 void Camera::setRoi(const Roi& roi_to_set) {
 	DEB_MEMBER_FUNCT();
+	std::cout << "SET ROI CAM" << std::endl;
+	std::cout << roi_to_set.getTopLeft().x << std::endl;
+	std::cout << roi_to_set.getSize().getWidth() << std::endl;
 	Roi roi = Roi(roi_to_set.getTopLeft().x, 0, roi_to_set.getSize().getWidth(), 0);
 	m_roi = roi;
 }
@@ -1235,6 +1250,16 @@ void Camera::setRoi(const Roi& roi_to_set) {
 void Camera::getRoi(Roi& roi) {
 	DEB_MEMBER_FUNCT();
 	roi = m_roi;
+}
+
+void Camera::checkRoi(const Roi& set_roi, Roi& hw_roi) {
+	DEB_MEMBER_FUNCT();
+	if (set_roi.isActive()) {
+		hw_roi = set_roi;
+	} else {
+		hw_roi = set_roi;
+	}
+	DEB_RETURN() << DEB_VAR1(hw_roi);
 }
 
 /**
@@ -1269,6 +1294,8 @@ void Camera::getAvailableTriggerModes(std::vector<std::string> &trigger_list) {
     for(TriggerNamesMap::iterator i = triggerNames.begin();
 	i != triggerNames.end();++i)
       triggers.push_back(i->second);
+
+	trigger_list = triggers;
 
 	DEB_RETURN() << DEB_VAR1(triggers);
 }
@@ -1684,7 +1711,7 @@ void Camera::setAuxDelay(int auxDelay) {
 	m_timingParams.auxDelay = auxDelay;
 }
 
-void Camera::getAuxDelay(int& auxDelay) {
+void Camera::getAuxDelay(int& auxDelay) const {
 	DEB_MEMBER_FUNCT();
 	auxDelay = m_timingParams.auxDelay;
 }
@@ -1706,6 +1733,16 @@ void Camera::setAuxWidth(int auxWidth) {
 void Camera::getAuxWidth(int& auxWidth) {
 	DEB_MEMBER_FUNCT();
 	auxWidth = m_timingParams.auxWidth;
+}
+
+void Camera::setXhTimingScript(string script) {
+	DEB_MEMBER_FUNCT();
+
+	if (std::find(m_xh_timing_scripts.begin(), m_xh_timing_scripts.end(), script) != m_xh_timing_scripts.end()) {
+		m_xh->sendWait("~" + script);
+	} else {
+		THROW_HW_ERROR(Error) << "Provided script not found";
+	}
 }
 
 /**
