@@ -135,6 +135,7 @@ void Camera::reset() {
 
 void Camera::prepareAcq() {
 	DEB_MEMBER_FUNCT();
+	std::cout << "PREPARE" << std::endl;
 	int mexptime;
 	mexptime = (int) round(m_exp_time); // in cycles
 	DEB_TRACE() << " nb frames : " << m_nb_frames;
@@ -156,7 +157,7 @@ void Camera::prepareAcq() {
 		if (m_nb_frames != total_frames)
 			THROW_HW_ERROR(Error) << " Trying to collect a different number of frames than is currently configured ";		
 	}
-	
+	std::cout << "END PREPARE" << std::endl;
 }
 
 void Camera::startAcq() {
@@ -166,6 +167,7 @@ void Camera::startAcq() {
 	StdBufferCbMgr& buffer_mgr = m_bufferCtrlObj.getBuffer();
 	buffer_mgr.setStartTimestamp(Timestamp::now());
 	cmd << "xstrip timing start " << m_sysName;
+	std::cout << "SAC 1" << std::endl;
 	m_xh->sendWait(cmd.str());
 	AutoMutex aLock(m_cond.mutex());
 	m_wait_flag = false;
@@ -207,10 +209,6 @@ void Camera::readFrame(void *bptr, int frame_nb, int nframes) {
 	if (m_xh->waitForResponse(retval) < 0) {
 		THROW_HW_ERROR(Error) << "Waiting for response in readFrame";
 	}
-
-//	uint32_t *dptr;
-//	dptr = (uint32_t *)bptr;
-//	std::cout << *dptr << " " << *(dptr+1) << " " << *(dptr+2) << std::endl;
 }
 
 void Camera::getStatus(XhStatus& status) {
@@ -289,6 +287,9 @@ void Camera::AcqThread::threadFunction() {
 
 		bool continueFlag = true;
 		while (continueFlag && (!m_cam.m_nb_frames || m_cam.m_acq_frame_nb < m_cam.m_nb_frames)) {
+			Bin bin; m_cam.getBin(bin);
+			int bin_size_x = bin.getX();
+			std::cout << "BIN SIZE: " << bin_size_x << std::endl;
 			XhStatus status;
 			m_cam.getStatus(status);
 			if (status.state == status.Idle || (status.completed_frames > m_cam.m_acq_frame_nb) ) {
@@ -313,7 +314,24 @@ void Camera::AcqThread::threadFunction() {
 				m_cam.readFrame(dptr, m_cam.m_acq_frame_nb, nframes);
 				for (int i=0; i<nframes; i++) {
 					int32_t* bptr = (int32_t*)buffer_mgr.getFrameBufferPtr(m_cam.m_acq_frame_nb);
-					memcpy(bptr, dptr + start, width*sizeof(int32_t));
+
+					// int32_t bptr_binned = (int32_t*)malloc(int(width / bin_size_x) * sizeof(int32_t));
+					std::vector<int32_t> dptr_binned;
+					if (bin_size_x != 1) {
+						for (unsigned int i = start; i < width; i+= bin_size_x) {
+							int32_t sum = 0;
+							for (unsigned int j = i; j < i + bin_size_x; j++)
+								sum += dptr[j];
+							dptr_binned.push_back(sum / bin_size_x);
+						}
+						width /= bin_size_x;
+						dptr = &dptr_binned[0];
+						std::cout << "width: " << width << std::endl;
+						memcpy(bptr, dptr, width*sizeof(int32_t));
+					} else {
+						memcpy(bptr, dptr + start, width*sizeof(int32_t));
+					}
+					// memcpy(bptr, dptr + start, width*sizeof(int32_t));
 					// memcpy(bptr, dptr, npoints*sizeof(int32_t));
 					dptr += npoints;
 					HwFrameInfoType frame_info;
@@ -897,22 +915,22 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 	case Camera::XhTrigIn_groupTrigger:
 		cmd << " ext-trig-group";
 		break;
+	case Camera::XhTrigIn_frameTrigger:
+		cmd << " ext-trig-frame";
+		break;
 	case Camera::XhTrigIn_groupTrigger | Camera::XhTrigIn_frameTrigger:
 		cmd << " ext-trig-group ext-trig-frame";
 		break;
-	case Camera::XhTrigIn_groupTrigger | Camera::XhTrigIn_frameTrigger | Camera::XhTrigIn_scanTrigger:
-		cmd << " ext-trig-group ext-trig-frame ext-trig-scan";
-		break;
-	case Camera::XhTrigIn_frameTrigger:
-		cmd << " ext-trig-frame-only";
-		break;
 	case Camera::XhTrigIn_scanTrigger:
-		cmd << " ext-trig-scan-only";
+		cmd << " ext-trig-scan";
+		break;
+	case Camera::XhTrigIn_groupTrigger | Camera::XhTrigIn_scanTrigger:
+		cmd << " ext-trig-group ext-trig-frame ext-trig-scan";
 		break;
 	}
 	switch (timingParams.trigControl & (Camera::XhTrigIn_groupOrbit | Camera::XhTrigIn_frameOrbit | Camera::XhTrigIn_scanOrbit)) {
 	case Camera::XhTrigIn_groupOrbit:
-		cmd << " ext-orbit-group";
+		cmd << " orbit-group";
 		break;
 	case Camera::XhTrigIn_groupOrbit | Camera::XhTrigIn_frameOrbit:
 		cmd << " orbit-group orbit-frame";
@@ -921,10 +939,10 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 		cmd << " orbit-group orbit-frame orbit-scan";
 		break;
 	case Camera::XhTrigIn_frameOrbit:
-		cmd << " orbit-frame-only";
+		cmd << " orbit-frame";
 		break;
 	case Camera::XhTrigIn_scanOrbit:
-		cmd << " orbit-scan-only";
+		cmd << " orbit-scan";
 		break;
 	}
 	if (timingParams.trigControl & Camera::XhTrigIn_fallingTrigger)
@@ -974,7 +992,6 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 		cmd << " allow-excess";
 
 	int num_frames;
-	std::cout << cmd.str() << std::endl;
 	m_xh->sendWait(cmd.str(), num_frames);
 
 
@@ -1183,15 +1200,19 @@ void Camera::getSetpoint(int channel, double& value) {
 /**
  * Get the current temperature from one of the 4 head sensors.
  *
- * @param[in] channel 0->3=temperature sensors,
- * @param[out] value The output temperature in degrees C.
+ * channel 0->3=temperature sensors,
+ * @param[out] temperatures The output temperature vector in degrees C for all sensors
  */
-void Camera::getTemperature(int channel, double& value) {
+void Camera::getTemperature(std::vector<double> &temperatures) {
 	DEB_MEMBER_FUNCT();
-	std::cout << "GETTEMP" << std::endl;
-	stringstream cmd;
-	cmd << "xstrip tc get " << m_sysName <<  " ch " << channel << " t";
-	m_xh->sendWait(cmd.str(), value);
+	int NUMER_OF_TEMP_CHANNELS = 4;
+	for (int channel = 0; channel < NUMER_OF_TEMP_CHANNELS; channel++) {
+		double value;
+		stringstream cmd;
+		cmd << "xstrip tc get " << m_sysName <<  " ch " << channel << " t";
+		m_xh->sendWait(cmd.str(), value);
+		temperatures.push_back(value);
+	}
 }
 
 /**
@@ -1240,9 +1261,6 @@ void Camera::sendCommand(string cmd) {
 
 void Camera::setRoi(const Roi& roi_to_set) {
 	DEB_MEMBER_FUNCT();
-	std::cout << "SET ROI CAM" << std::endl;
-	std::cout << roi_to_set.getTopLeft().x << std::endl;
-	std::cout << roi_to_set.getSize().getWidth() << std::endl;
 	Roi roi = Roi(roi_to_set.getTopLeft().x, 0, roi_to_set.getSize().getWidth(), 0);
 	m_roi = roi;
 }
@@ -1390,16 +1408,20 @@ void Camera::getOrbitTrig(int &orbitMux) {
  * where 2 bits are used for single output. When multiple values are provided
  * binary OR is calculated and corresponding outputs are then activated
  * 
- * @param[out] lemoOut return the vector of lemoOuts
+ * @param[in] lemoOut vector of lemoOuts
  */
 void Camera::setLemoOut(std::vector<int> lemoOut) {
 	DEB_MEMBER_FUNCT();
 
-	std::cout << lemoOut.size() << std::endl;
-
 	m_timingParams.lemoOut = lemoOut;
 }
 
+
+/**
+ * Gets lemo out value
+ * 
+ * @param[out] lemoOut return the vector of lemoOuts
+ */
 void Camera::getLemoOut(std::vector<int>& lemoOut) {
 	DEB_MEMBER_FUNCT();
 	lemoOut = m_timingParams.lemoOut;
@@ -1410,7 +1432,7 @@ void Camera::getLemoOut(std::vector<int>& lemoOut) {
  * add/no add a rounding error to the frame delay
  *
  * 
- * @param[out] correctRounding
+ * @param[in] correctRounding
  */
 
 void Camera::setCorrectRounding(bool correctRounding) {
@@ -1419,6 +1441,13 @@ void Camera::setCorrectRounding(bool correctRounding) {
 	m_timingParams.correctRounding = correctRounding;
 }
 
+/**
+ * Gets correct rounding
+ * add/no add a rounding error to the frame delay
+ *
+ * 
+ * @param[out] correctRounding
+ */
 void Camera::getCorrectRounding(bool& correctRounding) {
 	DEB_MEMBER_FUNCT();
 	correctRounding = m_timingParams.correctRounding;
@@ -1476,6 +1505,12 @@ void Camera::setScanPeriod(int scanPeriod) {
 
 	m_timingParams.scanPeriod = scanPeriod;
 }
+
+/**
+ * Gets scan period
+ * 
+ * @param[out] scanPeriod
+ */
 
 void Camera::getScanPeriod(int& scanPeriod) {
 	DEB_MEMBER_FUNCT();
@@ -1691,7 +1726,7 @@ void Camera::setVoltage(int voltage) {
 void Camera::getVoltage(int& voltage) {
 	DEB_MEMBER_FUNCT();
 	stringstream cmd;
-	cmd << "xstrip hv get-dac " << m_sysName;
+	cmd << "xstrip hv get-adc " << m_sysName;
 	m_xh->sendWait(cmd.str(), voltage);
 	// voltage = m_voltage;
 	DEB_RETURN() << DEB_VAR1(voltage);
@@ -1735,6 +1770,33 @@ void Camera::getAuxWidth(int& auxWidth) {
 	auxWidth = m_timingParams.auxWidth;
 }
 
+void Camera::setBin(const Bin &binning) {
+	m_binning = binning;
+}
+
+void Camera::getBin(Bin &binning) {
+	binning = m_binning;
+}
+
+void Camera::checkBin(Bin &binning) {
+	int bin_x = binning.getX();
+	int bin_y = binning.getY();
+
+	// Max vertical dimension is 1 since we receive a signal from detector
+	if (bin_y > 1) {
+		bin_y = 1;
+	}
+
+	binning = Bin(bin_x, bin_y);
+}
+
+/**
+ * Executes script with the name provided as param
+ *
+ * 
+ * @param[in] script - script file name
+ */
+
 void Camera::setXhTimingScript(string script) {
 	DEB_MEMBER_FUNCT();
 
@@ -1746,6 +1808,16 @@ void Camera::setXhTimingScript(string script) {
 }
 
 /**
+ * Gets device name
+ *
+ * @param[out] sys_name
+ */
+
+void Camera::getSysName(string &sys_name) {
+	sys_name = m_sysName;
+};
+
+/**
  * Shutdown the detector in a controlled manner
  *
  * @param[in] script The name of the shutdown command file
@@ -1754,6 +1826,7 @@ void Camera::shutDown(string script) {
 	DEB_MEMBER_FUNCT();
 	m_xh->sendWait(script);
 }
+
 
 /**
  * Change the format of the output data. In default mode the data is returned interleaved

@@ -29,6 +29,7 @@
 #include "XhDetInfoCtrlObj.h"
 #include "XhSyncCtrlObj.h"
 #include "XhRoiCtrlObj.h"
+#include "XhBinCtrlObj.h"
 
 using namespace lima;
 using namespace lima::Xh;
@@ -40,6 +41,7 @@ Interface::Interface(Camera& cam) :
 	m_det_info = new DetInfoCtrlObj(cam);
 	m_sync = new SyncCtrlObj(cam);
 	m_roi = new RoiCtrlObj(cam);
+	m_bin = new BinCtrlObj(cam);
 
 	// HwDetInfoCtrlObj *det_info = &m_det_info;
 	m_cap_list.push_back(m_det_info);
@@ -53,6 +55,8 @@ Interface::Interface(Camera& cam) :
 
 	// HwRoiCtrlObj *roi = &m_roi;
 	m_cap_list.push_back(m_roi);
+
+	m_cap_list.push_back(m_bin);
 
 	// m_sync.setNbFrames(1);
 	// m_sync.setExpTime(1.0);

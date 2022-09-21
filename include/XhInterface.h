@@ -36,6 +36,7 @@ namespace lima {
 	class DetInfoCtrlObj;
     class SyncCtrlObj;
     class RoiCtrlObj;
+	class BinCtrlObj;
 
 	class Camera;
 
@@ -66,6 +67,7 @@ namespace lima {
 			HwBufferCtrlObj*  m_bufferCtrlObj;
 			SyncCtrlObj* m_sync;
 			RoiCtrlObj* m_roi;
+			BinCtrlObj* m_bin;
 	};
 
 	} // namespace Xh

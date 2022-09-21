@@ -162,6 +162,10 @@ namespace lima {
 					XhTrigIn_fallingTrigger = 0x40	///>
 				};
 
+				enum BinningHorizontalType {
+					XhBinnType_average=1, XhBinnType_sum=2, XhBinnType_median=3
+				};
+
 				typedef map <TriggerControlType, std::string> TriggerNamesMap;
 
 				TriggerNamesMap triggerNames = {
@@ -232,7 +236,7 @@ namespace lima {
 				void setupClock(ClockModeType clockMode, int pll_gain=0, int extra_div=0, int caps=0, int r3=0, int r4=0, bool stage1=false, bool nocheck=false);
 
 				void getSetpoint(int channel, double& value);
-				void getTemperature(int channel, double& value);
+				void getTemperature(std::vector<double> &temperatures);
 
 				void setOffsets(int first, int num, int value, bool direct=false);
 				void syncClock();
@@ -318,7 +322,12 @@ namespace lima {
 				void checkRoi(const Roi& set_roi, Roi& hw_roi);
 
 				void setXhTimingScript(string script);
-			
+
+				void getSysName(string &sys_name);
+
+				void setBin(const Bin &binning);
+				void getBin(Bin &binning);
+				void checkBin(Bin &binning);
 
 			private:
 				// xh specific
@@ -348,13 +357,14 @@ namespace lima {
 				XhTimingParameters m_timingParams;
 				int m_nb_scans;
 				int m_clock_mode;
-				//double timearray[3] ;
 				Roi m_roi;
+				Bin m_binning;
 
 				int maxCycles = 3;
 				int minCycles = 0;
 
 				int m_voltage;
+
 
 				std::vector<std::string> m_xh_timing_scripts;
 				

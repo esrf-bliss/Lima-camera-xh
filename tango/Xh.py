@@ -79,7 +79,8 @@ class Xh(PyTango.Device_4Impl):
             'aux_delay': 'AuxDelay',
             'aux_width': 'AuxWidth',
             'nb_groups': 'NbGroups',
-            'temperature': 'Temperature'
+            'temperature': 'Temperature',
+            'voltage': 'Voltage',
         }
 			    
         self.init_device()
@@ -137,10 +138,11 @@ class Xh(PyTango.Device_4Impl):
 	
 	
         _XhCam.setHeadCaps(capsAB,capsCD)
+
 		
 #==================================================================
 #
-#    setHeadCaps command
+#    getAvailableCaps command
 #
 #==================================================================
     @Core.DEB_MEMBER_FUNCT
@@ -220,16 +222,17 @@ class Xh(PyTango.Device_4Impl):
         return _XhCam.setXhTimingScript(argin)
 
 
+
+
 #==================================================================
 #
 #   getTemperature command
-#   argin: channel number
 #
 #==================================================================
 
     @Core.DEB_MEMBER_FUNCT
-    def getTemperature(self, argin):
-        return  _XhCam.getTemperature(int(argin))
+    def getTemperature(self):
+        return  _XhCam.getTemperature()
 
 
 #==================================================================
@@ -244,6 +247,67 @@ class Xh(PyTango.Device_4Impl):
         delay = int(argin[0])
         falling_edge = bool(argin[1])
         return _XhCam.setTimingOrbit(delay, falling_edge)
+
+
+
+#==================================================================
+#
+#   setConfigTiming command
+#   argin[0]: trigger group 1 or 2
+#   argin[1]: trigger frame 1 or 2
+#   argin[2]: trigger acq 1 or 2
+#
+#==================================================================
+
+    @Core.DEB_MEMBER_FUNCT
+    def setConfigTiming(self, argin):
+        [trig_group, trig_frame, trig_acq] = argin
+        nscans = _XhCam.getNbScans()
+        nframes = _XhCam.getNbFrames()
+        ngroups = _XhCam.getNbGroups()
+        inttime = _XhCam.getExpTime()
+        sysName = _XhCam.getSysName()
+        latency_time = _XhCam.getLatTime()
+        trig_channel = _XhCam.getTrigMux()
+        _XhCam.sendCommand("xstrip timing ext-output " + sysName + " -1 integration")
+        bunch = int(inttime)
+        cycles_time = bunch
+        quarter = 0
+        if bunch != inttime:
+            cycles_time = bunch
+            quarter = int(10 * (inttime - bunch))
+            if quarter > 3:
+                quarter = 3
+        _XhCam.setS2Delay(quarter)
+        _XhCam.setNbGroups(ngroups)
+        _XhCam.setNbFrames(nframes)
+        _XhCam.setNbScans(nscans)
+        _XhCam.setExpTime(cycles_time)
+
+        if trig_group == 1:
+            _XhCam.setCustomTriggerMode('group_trigger')
+            _XhCam.setTrigMux(trig_channel)
+        elif trig_group == 2:
+            _XhCam.setCustomTriggerMode('group_orbit')
+            _XhCam.setOrbitTrig(3)
+
+        if trig_frame == 1:
+            _XhCam.setCustomTriggerMode('frame_trigger')
+            _XhCam.setTrigMux(trig_channel)
+        elif trig_frame == 2:
+            _XhCam.setCustomTriggerMode('frame_orbit')
+            _XhCam.setOrbitTrig(3)
+
+        if trig_acq == 1:
+            _XhCam.setCustomTriggerMode('scan_trigger')
+            _XhCam.setTrigMux(trig_channel)
+        elif trig_acq == 2:
+            _XhCam.setCustomTriggerMode('scan_orbit')
+            _XhCam.setOrbitTrig(3)
+               
+        _XhCam.setGroupDelay(latency_time)
+        _XhCam.setLemoOut([65535])
+
 
 #==================================================================
 #
@@ -419,13 +483,15 @@ class XhClass(PyTango.DeviceClass):
         [[PyTango.DevString, "Script name"],
             [PyTango.DevVoid, ""]],
         'getTemperature':
-        [[PyTango.DevString, "Channel number"],
-            [PyTango.DevFloat, ""]],
+        [[PyTango.DevVoid, ""],
+            [PyTango.DevVarFloatArray, ""]],
         'setTimingOrbit': [[
             PyTango.DevVarULongArray, "Array containing two elements, first corresponds to delay (int), second (bool, 0/1) tells if falling edge is used"
         ], [
             PyTango.DevVoid, ""
-        ]]
+        ]],
+        'setConfigTiming': [[PyTango.DevVarFloatArray, "Array containing 3 variables with values equal to 1 or 2. Corresponding to trig_group, trig_frame, trig_acq respectively"],
+            [PyTango.DevVoid, ""]]
     }
 		
     attr_list = {
@@ -484,7 +550,11 @@ class XhClass(PyTango.DeviceClass):
         'custom_trigger_mode':
     [[PyTango.DevString,
     PyTango.SCALAR,
-    PyTango.WRITE]]
+    PyTango.WRITE]],
+        'voltage':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
     }
 
     def __init__(self,name) :

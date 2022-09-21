@@ -146,6 +146,10 @@ namespace Xh
 		XhTrigIn_fallingTrigger = 0x40		///>
 	};
 
+	enum BinningHorizontalType {
+		XhBinnType_average=1, XhBinnType_sum=2, XhBinnType_median=3
+	};
+
 	struct XhTimingParameters {
 	public:
 		Xh::Camera::TriggerControlType trigControl;	///> Trigger control {@see #Camera::TriggerControlType}
@@ -205,7 +209,7 @@ namespace Xh
 	void setupClock(ClockModeType clockMode, int pll_gain=0, int extra_div=0, int caps=0, int r3=0, int r4=0, bool stage1=false, bool nocheck=false);
 
 	void getSetpoint(int channel, double& value);
-	void getTemperature(int channel, double& value /Out/);
+	void getTemperature(std::vector<double> &temperatures /Out/);
 
 	void setOffsets(int first, int num, int value, bool direct=false);
 	void syncClock();
@@ -283,6 +287,12 @@ namespace Xh
     void getMaxFrames(std::string& nframes /Out/);
 	void getNbGroups(int& nb_groups /Out/);
 	void setNbGroups(int nb_groups);
+
+	void getSysName(std::string &sys_name /Out/);
+
+	void setBin(const Bin &binning);
+	void getBin(Bin &binning /Out/);
+	void checkBin(Bin &binning);
 	
   private:
 	Camera(const Xh::Camera&);
