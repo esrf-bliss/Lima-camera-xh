@@ -78,9 +78,13 @@ class Xh(PyTango.Device_4Impl):
             'scan_period': 'ScanPeriod',
             'aux_delay': 'AuxDelay',
             'aux_width': 'AuxWidth',
-            'nb_groups': 'NbGroups',
+            'nbgroups': 'NbGroups',
+            'nbscans': 'NbScans',
             'temperature': 'Temperature',
             'voltage': 'Voltage',
+            'trig_group_mode': 'TrigGroupMode',
+            'trig_scan_mode': 'TrigScanMode',
+            'trig_frame_mode': 'TrigFrameMode',
         }
 			    
         self.init_device()
@@ -249,65 +253,37 @@ class Xh(PyTango.Device_4Impl):
         return _XhCam.setTimingOrbit(delay, falling_edge)
 
 
-
 #==================================================================
 #
-#   setConfigTiming command
-#   argin[0]: trigger group 1 or 2
-#   argin[1]: trigger frame 1 or 2
-#   argin[2]: trigger acq 1 or 2
+#   coolDown command
 #
 #==================================================================
 
     @Core.DEB_MEMBER_FUNCT
-    def setConfigTiming(self, argin):
-        [trig_group, trig_frame, trig_acq] = argin
-        nscans = _XhCam.getNbScans()
-        nframes = _XhCam.getNbFrames()
-        ngroups = _XhCam.getNbGroups()
-        inttime = _XhCam.getExpTime()
-        sysName = _XhCam.getSysName()
-        latency_time = _XhCam.getLatTime()
-        trig_channel = _XhCam.getTrigMux()
-        _XhCam.sendCommand("xstrip timing ext-output " + sysName + " -1 integration")
-        bunch = int(inttime)
-        cycles_time = bunch
-        quarter = 0
-        if bunch != inttime:
-            cycles_time = bunch
-            quarter = int(10 * (inttime - bunch))
-            if quarter > 3:
-                quarter = 3
-        _XhCam.setS2Delay(quarter)
-        _XhCam.setNbGroups(ngroups)
-        _XhCam.setNbFrames(nframes)
-        _XhCam.setNbScans(nscans)
-        _XhCam.setExpTime(cycles_time)
+    def coolDown(self):
+        return  _XhCam.coolDown()
 
-        if trig_group == 1:
-            _XhCam.setCustomTriggerMode('group_trigger')
-            _XhCam.setTrigMux(trig_channel)
-        elif trig_group == 2:
-            _XhCam.setCustomTriggerMode('group_orbit')
-            _XhCam.setOrbitTrig(3)
 
-        if trig_frame == 1:
-            _XhCam.setCustomTriggerMode('frame_trigger')
-            _XhCam.setTrigMux(trig_channel)
-        elif trig_frame == 2:
-            _XhCam.setCustomTriggerMode('frame_orbit')
-            _XhCam.setOrbitTrig(3)
+#==================================================================
+#
+#   powerDown command
+#
+#==================================================================
 
-        if trig_acq == 1:
-            _XhCam.setCustomTriggerMode('scan_trigger')
-            _XhCam.setTrigMux(trig_channel)
-        elif trig_acq == 2:
-            _XhCam.setCustomTriggerMode('scan_orbit')
-            _XhCam.setOrbitTrig(3)
-               
-        _XhCam.setGroupDelay(latency_time)
-        _XhCam.setLemoOut([65535])
+    @Core.DEB_MEMBER_FUNCT
+    def powerDown(self):
+        return  _XhCam.powerDown()
 
+
+#==================================================================
+#
+#   configXh command
+#
+#==================================================================
+
+    @Core.DEB_MEMBER_FUNCT
+    def configXh(self):
+        return  _XhCam.configXh()
 
 #==================================================================
 #
@@ -337,31 +313,6 @@ class Xh(PyTango.Device_4Impl):
         clockmode = AttrHelper.getDictValue(self.__clockmode,data)
         print (clockmode)
         _XhCam.setupClock(clockmode)
-
-#------------------------------------------------------------------
-#    write nbscans:
-#
-#    Description: writes the nbscans 
-#    argin: DevInt   
-#------------------------------------------------------------------	
-
-    def write_nbscans(self,attr):
-        data = attr.get_write_value()
-        nbscans = data
-        print (nbscans)
-        _XhCam.setNbScans(nbscans)
-
-
-#------------------------------------------------------------------
-#    read nbscans:
-#
-#    Description: reads the nbscans 
-#    argin: DevInt   
-#------------------------------------------------------------------	
-
-    def read_nbscans(self,attr):
-        nbscans = _XhCam.getNbScans()
-        attr.set_value(nbscans)
 
 #------------------------------------------------------------------
 #    read maxframes:
@@ -490,8 +441,15 @@ class XhClass(PyTango.DeviceClass):
         ], [
             PyTango.DevVoid, ""
         ]],
-        'setConfigTiming': [[PyTango.DevVarFloatArray, "Array containing 3 variables with values equal to 1 or 2. Corresponding to trig_group, trig_frame, trig_acq respectively"],
-            [PyTango.DevVoid, ""]]
+        'powerDown':
+        [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""]],
+        'coolDown':
+        [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""]],
+        'configXh':
+        [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""]],
     }
 		
     attr_list = {
@@ -503,7 +461,7 @@ class XhClass(PyTango.DeviceClass):
 	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ_WRITE]],
-        'nb_groups':
+        'nbgroups':
 	[[PyTango.DevLong,
 	PyTango.SCALAR,
 	PyTango.READ_WRITE]],
@@ -552,6 +510,18 @@ class XhClass(PyTango.DeviceClass):
     PyTango.SCALAR,
     PyTango.WRITE]],
         'voltage':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'trig_group_mode':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'trig_frame_mode':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'trig_scan_mode':
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],

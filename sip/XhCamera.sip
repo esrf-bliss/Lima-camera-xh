@@ -293,6 +293,10 @@ namespace Xh
 	void setBin(const Bin &binning);
 	void getBin(Bin &binning /Out/);
 	void checkBin(Bin &binning);
+
+	void coolDown();
+	void powerDown();
+	void configXh();
 	
   private:
 	Camera(const Xh::Camera&);

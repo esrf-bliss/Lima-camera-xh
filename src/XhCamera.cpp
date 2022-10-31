@@ -133,11 +133,50 @@ void Camera::reset() {
 	init();
 }
 
+void Camera::_prepareAcq() {
+        sendCommand("xstrip timing ext-output " + m_sysName + " -1 integration");
+        int bunch = (int) m_exp_time;
+        int cycles_time = bunch;
+        int quarter = 0;
+		int inttime = m_exp_time;
+        if (bunch != m_exp_time) {
+            cycles_time = bunch;
+            quarter = (int) 10 * (inttime - bunch);
+            if (quarter > 3)
+            	quarter = 3;
+		}
+		setS2Delay(quarter);
+        setExpTime(cycles_time);
+
+        if (m_trig_group_mode == 1)
+			setCustomTriggerMode("group_trigger");
+		else if (m_trig_group_mode == 2) {
+			setCustomTriggerMode("group_orbit");
+            setOrbitTrig(3);
+		}
+
+        if (m_trig_frame_mode == 1)
+            setCustomTriggerMode("frame_trigger");
+		else if (m_trig_frame_mode == 2) {
+			setCustomTriggerMode("frame_orbit");
+            setOrbitTrig(3);
+		}
+
+        if (m_trig_scan_mode == 1)
+            setCustomTriggerMode("scan_trigger");
+		else if (m_trig_scan_mode == 2) {
+			setCustomTriggerMode("scan_orbit");
+            setOrbitTrig(3);
+		}
+		
+        setLemoOut(std::vector<int>(65535));
+}
+
 void Camera::prepareAcq() {
 	DEB_MEMBER_FUNCT();
-	std::cout << "PREPARE" << std::endl;
 	int mexptime;
 	mexptime = (int) round(m_exp_time); // in cycles
+	_prepareAcq();
 	DEB_TRACE() << " nb frames : " << m_nb_frames;
 	DEB_TRACE() << " nb scans  : " << m_nb_scans;
 	DEB_TRACE() << " exp time  : " << mexptime;
@@ -1790,6 +1829,30 @@ void Camera::checkBin(Bin &binning) {
 	binning = Bin(bin_x, bin_y);
 }
 
+void Camera::setTrigGroupMode(int trig_mode) { 
+	m_trig_group_mode = trig_mode;
+}
+
+void Camera::getTrigGroupMode(int& trig_mode) { 
+	trig_mode = m_trig_group_mode;
+}
+
+void Camera::setTrigScanMode(int trig_mode) { 
+	m_trig_scan_mode = trig_mode;
+}
+
+void Camera::getTrigScanMode(int& trig_mode) { 
+	trig_mode = m_trig_scan_mode;
+}
+
+void Camera::setTrigFrameMode(int trig_mode) { 
+	m_trig_frame_mode = trig_mode;
+}
+
+void Camera::getTrigFrameMode(int& trig_mode) { 
+	trig_mode = m_trig_frame_mode;
+}
+
 /**
  * Executes script with the name provided as param
  *
@@ -1827,7 +1890,20 @@ void Camera::shutDown(string script) {
 	m_xh->sendWait(script);
 }
 
+void Camera::coolDown() {
+	DEB_MEMBER_FUNCT();
+	m_xh->sendWait("~head_powerdown");
+}
 
+void Camera::powerDown() {
+	DEB_MEMBER_FUNCT();
+	m_xh->sendWait("~cooldown_xh");
+}
+
+void Camera::configXh() {
+	DEB_MEMBER_FUNCT();
+	m_xh->sendWait("~config_xhx3");
+}
 /**
  * Change the format of the output data. In default mode the data is returned interleaved
  * which is as how the xh heads are wired. In un-interleaved mode each head returns its data

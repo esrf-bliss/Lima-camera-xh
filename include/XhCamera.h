@@ -207,6 +207,7 @@ namespace lima {
 				vector<string> getDebugMessages();
 				void sendCommand(string cmd);
 				void shutDown(string cmd);
+				void _prepareAcq();
 				void uninterleave(bool uninterleave);
 				void set16BitReadout(bool mode);
 				void setDeadPixels(int first, int num, bool reset=false);
@@ -329,6 +330,19 @@ namespace lima {
 				void getBin(Bin &binning);
 				void checkBin(Bin &binning);
 
+				void setTrigGroupMode(int trig_mode);
+				void getTrigGroupMode(int& trig_mode);
+
+				void setTrigScanMode(int trig_mode);
+				void getTrigScanMode(int& trig_mode);
+
+				void setTrigFrameMode(int trig_mode);
+				void getTrigFrameMode(int& trig_mode);
+
+				void coolDown();
+				void powerDown();
+				void configXh();
+
 			private:
 				// xh specific
 				XhClient *m_xh;
@@ -364,6 +378,10 @@ namespace lima {
 				int minCycles = 0;
 
 				int m_voltage;
+
+				int m_trig_group_mode;
+				int m_trig_frame_mode;
+				int m_trig_scan_mode;
 
 
 				std::vector<std::string> m_xh_timing_scripts;
