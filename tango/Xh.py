@@ -162,10 +162,27 @@ class Xh(PyTango.Device_4Impl):
     @Core.DEB_MEMBER_FUNCT
     def sendCommand(self,argin):
         cmd = argin
-
-        print (cmd)
-	
         _XhCam.sendCommand(cmd)
+
+#==================================================================
+#
+#    setCommandNumber command
+#
+#==================================================================
+    @Core.DEB_MEMBER_FUNCT
+    def sendCommandNumber(self,argin):
+        cmd = argin
+        return _XhCam.sendCommandNumber(cmd)
+
+#==================================================================
+#
+#    setCommandString command
+#
+#==================================================================
+    @Core.DEB_MEMBER_FUNCT
+    def sendCommandString(self,argin):
+        cmd = argin
+        return _XhCam.sendCommandString(cmd)
 
 #==================================================================
 #
@@ -226,8 +243,6 @@ class Xh(PyTango.Device_4Impl):
         return _XhCam.setXhTimingScript(argin)
 
 
-
-
 #==================================================================
 #
 #   getTemperature command
@@ -236,7 +251,7 @@ class Xh(PyTango.Device_4Impl):
 
     @Core.DEB_MEMBER_FUNCT
     def getTemperature(self):
-        return  _XhCam.getTemperature()
+        return _XhCam.getTemperature()
 
 
 #==================================================================
@@ -361,6 +376,16 @@ class Xh(PyTango.Device_4Impl):
         _XhCam.setCustomTriggerMode(data)
 
 #------------------------------------------------------------------
+#    read timingScript:
+#
+#    Description: reads the current timing script name
+#------------------------------------------------------------------	
+
+    def read_timing_script(self,attr):
+        script = _XhCam.getTimingScript()
+        attr.set_value(script)
+
+#------------------------------------------------------------------
 #------------------------------------------------------------------
 #    class XhClass
 #------------------------------------------------------------------
@@ -415,6 +440,12 @@ class XhClass(PyTango.DeviceClass):
         'sendCommand':
         [[PyTango.DevString, "da.server command"],
             [PyTango.DevVoid, ""]],
+        'sendCommandNumber':
+        [[PyTango.DevString, "da.server command"],
+            [PyTango.DevFloat, ""]],
+        'sendCommandString':
+        [[PyTango.DevString, "da.server command"],
+            [PyTango.DevString, ""]],
         'setHighVoltageOn':
         [[PyTango.DevVoid, ""],
             [PyTango.DevVoid, ""]],
@@ -510,7 +541,7 @@ class XhClass(PyTango.DeviceClass):
     PyTango.SCALAR,
     PyTango.WRITE]],
         'voltage':
-    [[PyTango.DevLong,
+    [[PyTango.DevFloat,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
         'trig_group_mode':
@@ -525,6 +556,10 @@ class XhClass(PyTango.DeviceClass):
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
+        'timing_script':
+    [[PyTango.DevString,
+    PyTango.SCALAR,
+    PyTango.READ]],
     }
 
     def __init__(self,name) :

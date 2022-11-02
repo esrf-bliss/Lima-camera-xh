@@ -177,6 +177,8 @@ namespace Xh
 
 	//vector<std::string> getDebugMessages();
 	void sendCommand(std::string cmd);
+	std::string sendCommandString(std::string cmd);
+	double sendCommandNumber(std::string cmd);
 	void shutDown(std::string cmd);
 	void uninterleave(bool uninterleave);
 	void set16BitReadout(bool mode);
@@ -279,8 +281,8 @@ namespace Xh
 	void setCustomTriggerMode(std::string trig_mode);
 	void getCustomTriggerMode(std::string& trig_mode);
 
-	void setVoltage(int voltage);
-	void getVoltage(int& voltage);
+	void setVoltage(double voltage);
+	void getVoltage(double& voltage);
 
 	void setNbScans(int nb_scans);
 	void getNbScans(int& nb_scans /Out/);
@@ -297,6 +299,8 @@ namespace Xh
 	void coolDown();
 	void powerDown();
 	void configXh();
+
+	std::string getTimingScript() const;
 	
   private:
 	Camera(const Xh::Camera&);

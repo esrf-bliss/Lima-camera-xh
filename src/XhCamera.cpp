@@ -1291,11 +1291,25 @@ void Camera::syncClock() {
 /**
  * Send a command directly to the server. Not recommend for general use.
  *
- * @param[in] cmd A server command returning an int
+ * @param[in] cmd A server command
  */
 void Camera::sendCommand(string cmd) {
 	DEB_MEMBER_FUNCT();
 	m_xh->sendWait(cmd);
+}
+
+double Camera::sendCommandNumber(string cmd) {
+	DEB_MEMBER_FUNCT();
+	double value;
+	m_xh->sendWait(cmd, value);
+	return value;
+}
+
+string Camera::sendCommandString(string cmd) {
+	DEB_MEMBER_FUNCT();
+	std::string value;
+	m_xh->sendWait(cmd, value);
+	return value;
 }
 
 void Camera::setRoi(const Roi& roi_to_set) {
@@ -1754,7 +1768,7 @@ void Camera::getAllowExcess (bool& allowExcess) {
  * @param[out] allowExcess
  */
 
-void Camera::setVoltage(int voltage) {
+void Camera::setVoltage(double voltage) {
 	DEB_MEMBER_FUNCT();
 	stringstream cmd;
 	cmd << "xstrip hv set-dac " << m_sysName << " " << voltage;
@@ -1762,7 +1776,7 @@ void Camera::setVoltage(int voltage) {
 	m_voltage = voltage;
 }
 
-void Camera::getVoltage(int& voltage) {
+void Camera::getVoltage(double& voltage) {
 	DEB_MEMBER_FUNCT();
 	stringstream cmd;
 	cmd << "xstrip hv get-adc " << m_sysName;
@@ -1870,6 +1884,12 @@ void Camera::setXhTimingScript(string script) {
 	}
 }
 
+string Camera::getTimingScript() const {
+	DEB_MEMBER_FUNCT();
+	string timingScript;
+	m_xh->sendWait("%xstrip_timing_file", timingScript);
+	return timingScript;
+}
 /**
  * Gets device name
  *
@@ -1904,6 +1924,7 @@ void Camera::configXh() {
 	DEB_MEMBER_FUNCT();
 	m_xh->sendWait("~config_xhx3");
 }
+
 /**
  * Change the format of the output data. In default mode the data is returned interleaved
  * which is as how the xh heads are wired. In un-interleaved mode each head returns its data

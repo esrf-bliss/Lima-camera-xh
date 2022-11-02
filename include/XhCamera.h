@@ -206,6 +206,8 @@ namespace lima {
 
 				vector<string> getDebugMessages();
 				void sendCommand(string cmd);
+				string sendCommandString(string cmd);
+				double sendCommandNumber(string cmd);
 				void shutDown(string cmd);
 				void _prepareAcq();
 				void uninterleave(bool uninterleave);
@@ -315,8 +317,8 @@ namespace lima {
 				void setCustomTriggerMode(std::string trig_mode);
 				void getCustomTriggerMode(std::string& trig_mode);
 
-				void setVoltage(int voltage);
-				void getVoltage(int& voltage);
+				void setVoltage(double voltage);
+				void getVoltage(double& voltage);
 
 				void setRoi(const Roi& roi_to_set);
 				void getRoi(Roi& roi);
@@ -342,6 +344,8 @@ namespace lima {
 				void coolDown();
 				void powerDown();
 				void configXh();
+
+				string getTimingScript() const;
 
 			private:
 				// xh specific
