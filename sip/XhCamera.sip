@@ -284,6 +284,11 @@ namespace Xh
 	void setVoltage(double voltage);
 	void getVoltage(double& voltage);
 
+	void getBias(double& bias);
+
+	void getCapa(double& capa);
+	void setCapa(double capa);
+
 	void setNbScans(int nb_scans);
 	void getNbScans(int& nb_scans /Out/);
     void getMaxFrames(std::string& nframes /Out/);

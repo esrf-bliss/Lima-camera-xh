@@ -61,8 +61,10 @@ private:
 // @brief  Ctor
 //---------------------------
 
-Camera::Camera(string hostname, int port, string configName, std::vector<std::string> XH_TIMING_SCRIPT) : m_hostname(hostname), m_port(port), m_configName(configName),
-		m_sysName("'xh0'"), m_uninterleave(false), m_nb_groups(1), m_npixels(1024), m_image_type(Bpp32), m_nb_frames(1), m_acq_frame_nb(-1), m_exp_time(1.0), m_bufferCtrlObj(){
+Camera::Camera(string hostname, int port, string configName, std::vector<std::string> XH_TIMING_SCRIPT) :
+m_hostname(hostname), m_port(port), m_configName(configName), m_sysName("'xh0'"),
+m_uninterleave(false), m_nb_groups(1), m_npixels(1024), m_image_type(Bpp32), m_nb_frames(1), 
+m_acq_frame_nb(-1), m_exp_time(1.0), m_bufferCtrlObj() {
 	DEB_CONSTRUCTOR();
 
 //	DebParams::setModuleFlags(DebParams::AllFlags);
@@ -169,7 +171,9 @@ void Camera::_prepareAcq() {
             setOrbitTrig(3);
 		}
 		
-        setLemoOut(std::vector<int>(65535));
+		std::vector<int> lemos;
+		lemos.push_back(65535);
+        setLemoOut(lemos);
 }
 
 void Camera::prepareAcq() {
@@ -196,7 +200,6 @@ void Camera::prepareAcq() {
 		if (m_nb_frames != total_frames)
 			THROW_HW_ERROR(Error) << " Trying to collect a different number of frames than is currently configured ";		
 	}
-	std::cout << "END PREPARE" << std::endl;
 }
 
 void Camera::startAcq() {
@@ -206,7 +209,6 @@ void Camera::startAcq() {
 	StdBufferCbMgr& buffer_mgr = m_bufferCtrlObj.getBuffer();
 	buffer_mgr.setStartTimestamp(Timestamp::now());
 	cmd << "xstrip timing start " << m_sysName;
-	std::cout << "SAC 1" << std::endl;
 	m_xh->sendWait(cmd.str());
 	AutoMutex aLock(m_cond.mutex());
 	m_wait_flag = false;
@@ -328,7 +330,6 @@ void Camera::AcqThread::threadFunction() {
 		while (continueFlag && (!m_cam.m_nb_frames || m_cam.m_acq_frame_nb < m_cam.m_nb_frames)) {
 			Bin bin; m_cam.getBin(bin);
 			int bin_size_x = bin.getX();
-			std::cout << "BIN SIZE: " << bin_size_x << std::endl;
 			XhStatus status;
 			m_cam.getStatus(status);
 			if (status.state == status.Idle || (status.completed_frames > m_cam.m_acq_frame_nb) ) {
@@ -365,7 +366,6 @@ void Camera::AcqThread::threadFunction() {
 						}
 						width /= bin_size_x;
 						dptr = &dptr_binned[0];
-						std::cout << "width: " << width << std::endl;
 						memcpy(bptr, dptr, width*sizeof(int32_t));
 					} else {
 						memcpy(bptr, dptr + start, width*sizeof(int32_t));
@@ -1760,6 +1760,43 @@ void Camera::getAllowExcess (bool& allowExcess) {
 	allowExcess  = m_timingParams.allowExcess;
 }
 
+/**
+ * Read Bias
+ *
+ * 
+ * @param[out] bias
+ */
+
+void Camera::getBias(double& bias) {
+	DEB_MEMBER_FUNCT();
+	stringstream cmd;
+	cmd << "xstrip hv get-adc " << m_sysName << " ibias";
+	m_xh->sendWait(cmd.str(), bias);
+	DEB_RETURN() << DEB_VAR1(bias);
+}
+
+/**
+ * Read Bias
+ *
+ * 
+ * @param[out] bias
+ */
+
+void Camera::getCapa(double& capa) {
+	DEB_MEMBER_FUNCT();
+	stringstream cmd;
+	cmd << "xstrip head get-caps " << m_sysName << " 0";
+	m_xh->sendWait(cmd.str(), capa);
+	DEB_RETURN() << DEB_VAR1(capa);
+}
+
+void Camera::setCapa(double capa) {
+	DEB_MEMBER_FUNCT();
+	stringstream cmd;
+	cmd << "xstrip head set-dac " << m_sysName <<  " " << capa;
+	m_xh->sendWait(cmd.str());
+	m_capa = capa;
+}
 
 /**
  * Set voltage

@@ -320,6 +320,11 @@ namespace lima {
 				void setVoltage(double voltage);
 				void getVoltage(double& voltage);
 
+				void getBias(double& bias);
+
+				void getCapa(double& capa);
+				void setCapa(double capa);
+
 				void setRoi(const Roi& roi_to_set);
 				void getRoi(Roi& roi);
 				void checkRoi(const Roi& set_roi, Roi& hw_roi);
@@ -354,6 +359,7 @@ namespace lima {
 				int m_port;
 				string m_configName;
 				string m_sysName;
+				// float m_bunch_factor;
 
 				int m_uninterleave;
 				int m_npixels;
@@ -382,6 +388,7 @@ namespace lima {
 				int minCycles = 0;
 
 				int m_voltage;
+				double m_capa;
 
 				int m_trig_group_mode;
 				int m_trig_frame_mode;

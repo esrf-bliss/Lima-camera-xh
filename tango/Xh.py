@@ -85,6 +85,8 @@ class Xh(PyTango.Device_4Impl):
             'trig_group_mode': 'TrigGroupMode',
             'trig_scan_mode': 'TrigScanMode',
             'trig_frame_mode': 'TrigFrameMode',
+            'bias': 'Bias',
+            'capa': 'Capa'
         }
 			    
         self.init_device()
@@ -385,6 +387,9 @@ class Xh(PyTango.Device_4Impl):
         script = _XhCam.getTimingScript()
         attr.set_value(script)
 
+    def read_bias(self,attr):
+        bias = _XhCam.getBias()
+        attr.set_value(bias)
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #    class XhClass
@@ -424,7 +429,9 @@ class XhClass(PyTango.DeviceClass):
         'config_timing_4turn_16bunch',
         'config_timing_5turn_4bunch',
         'config_timing_5turn_16bunch',
-        ]]
+        ]],
+        # "Bunch factor": 
+        # [PyTango.DevFloat, "bunch_factor", ["1"]]
         }
 
     cmd_list = {
@@ -560,6 +567,14 @@ class XhClass(PyTango.DeviceClass):
     [[PyTango.DevString,
     PyTango.SCALAR,
     PyTango.READ]],
+        'bias':
+    [[PyTango.DevFloat,
+    PyTango.SCALAR,
+    PyTango.READ],{ 'format': '%e' } ],
+       'capa':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
     }
 
     def __init__(self,name) :
