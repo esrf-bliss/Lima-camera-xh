@@ -74,7 +74,7 @@ namespace lima {
 						int completed_frames;	///< The number of frames completed, only valid when not {@link #Idle}
 				};
 
-				Camera(string hostname, int port, string configName, std::vector<std::string> XH_TIMING_SCRIPT);
+				Camera(string hostname, int port, string configName, std::vector<std::string> XH_TIMING_SCRIPT, float clock_factor);
 				~Camera();
 
 				void init();
@@ -230,7 +230,6 @@ namespace lima {
 				void setDefaultTimingParameters(XhTimingParameters& timingParams);
 				void setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last, const XhTimingParameters& timingParams);
 				void modifyTimingGroup(int group_num, int fixed_reset=-1, bool last=false, bool allowExcess=false);
-				void setTimingOrbit(int delay, bool use_falling_edge=false);
 				void getTimingInfo(unsigned int* buff, int firstParam, int nParams, int firstGroup, int nGroups);
 				void continueAcq();
 				void setLedTiming(int pause_time, int frame_time, int int_time, bool wait_for_trig);
@@ -317,6 +316,8 @@ namespace lima {
 				void setCustomTriggerMode(std::string trig_mode);
 				void getCustomTriggerMode(std::string& trig_mode);
 
+				// The code stays in C++, but the attribute to set the voltage is removed from
+				// python DS - setting a voltage directly can be dangerous.
 				void setVoltage(double voltage);
 				void getVoltage(double& voltage);
 
@@ -324,6 +325,16 @@ namespace lima {
 
 				void getCapa(double& capa);
 				void setCapa(double capa);
+
+				void getTimeMode(bool& timeMode);
+				void setTimeMode(bool timeMode);
+
+				void setOrbitDelayRising(double orbit_delay_rising);
+				void getOrbitDelayRising(double& orbit_delay_rising);
+				void setOrbitDelayFalling(double orbit_delay_falling);
+				void getOrbitDelayFalling(double& orbit_delay_falling);
+				void setOrbitDelay(double orbit_delay);
+				void getOrbitDelay(double& orbit_delay);
 
 				void setRoi(const Roi& roi_to_set);
 				void getRoi(Roi& roi);
@@ -359,6 +370,7 @@ namespace lima {
 				int m_port;
 				string m_configName;
 				string m_sysName;
+				float m_clock_factor;
 				// float m_bunch_factor;
 
 				int m_uninterleave;
@@ -389,11 +401,15 @@ namespace lima {
 
 				int m_voltage;
 				double m_capa;
+				double m_orbit_delay;
+				bool m_orbit_delay_falling;
+				bool m_orbit_delay_rising;				
+				bool m_time_mode;
+				int m_interal_trigger_multi_repetitions;
 
-				int m_trig_group_mode;
-				int m_trig_frame_mode;
-				int m_trig_scan_mode;
-
+				int m_trig_group_mode = 0;
+				int m_trig_frame_mode = 0;
+				int m_trig_scan_mode = 0;
 
 				std::vector<std::string> m_xh_timing_scripts;
 				

@@ -92,7 +92,7 @@ void XhClient::sendWait(string cmd) {
 		THROW_HW_ERROR(Error) << "Waiting for response from server";
 	}
 	if (rc < 0) {
-		THROW_HW_ERROR(Error) << "[ " << m_errorMessage << " ]";
+		// THROW_HW_ERROR(Error) << "[ " << m_errorMessage << " ]";
 	}
 }
 
@@ -306,6 +306,7 @@ vector<string> XhClient::getDebugMessages() const {
 
 void XhClient::sendCmd(const string cmd) {
 	DEB_MEMBER_FUNCT();
+	std::cout << "sendWait(" << cmd << ")" << std::endl;
 	int r, len;
 	char *p;
 	string command = cmd + "\n";

@@ -116,7 +116,7 @@ void Interface::getStatus(StatusType& status) {
 	case Camera::XhStatus::Idle:
 		status.acq = AcqReady;
 		status.det = DetIdle;
-		std::cout << "Camera idle" << std::endl;
+		// std::cout << "Camera idle" << std::endl;
 		break;
 	case Camera::XhStatus::PausedAtGroup:
 	case Camera::XhStatus::PausedAtFrame:

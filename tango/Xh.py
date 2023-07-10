@@ -81,12 +81,15 @@ class Xh(PyTango.Device_4Impl):
             'nbgroups': 'NbGroups',
             'nbscans': 'NbScans',
             'temperature': 'Temperature',
-            'voltage': 'Voltage',
             'trig_group_mode': 'TrigGroupMode',
             'trig_scan_mode': 'TrigScanMode',
             'trig_frame_mode': 'TrigFrameMode',
             'bias': 'Bias',
-            'capa': 'Capa'
+            'capa': 'Capa',
+            'orbit_delay': 'OrbitDelay',
+            'orbit_delay_falling': 'OrbitDelayFalling',
+            'orbit_delay_rising': 'OrbitDelayRising',
+            'timemode': 'TimeMode',
         }
 			    
         self.init_device()
@@ -258,20 +261,6 @@ class Xh(PyTango.Device_4Impl):
 
 #==================================================================
 #
-#   setTimingOrbit command
-#   argin[0]: delay
-#   argin[1]: falling edge
-#
-#==================================================================
-    @Core.DEB_MEMBER_FUNCT
-    def setTimingOrbit(self, argin):
-        delay = int(argin[0])
-        falling_edge = bool(argin[1])
-        return _XhCam.setTimingOrbit(delay, falling_edge)
-
-
-#==================================================================
-#
 #   coolDown command
 #
 #==================================================================
@@ -390,6 +379,7 @@ class Xh(PyTango.Device_4Impl):
     def read_bias(self,attr):
         bias = _XhCam.getBias()
         attr.set_value(bias)
+
 #------------------------------------------------------------------
 #------------------------------------------------------------------
 #    class XhClass
@@ -410,6 +400,9 @@ class XhClass(PyTango.DeviceClass):
         'config_name':
         [PyTango.DevString,
          "The default configuration loaded",[]],
+        'clock_factor':
+        [PyTango.DevFloat,
+        'clock_factor', 1],
         'XH_TIMING_SCRIPT':
         [PyTango.DevVarStringArray,
         "Timing scripts",
@@ -474,11 +467,6 @@ class XhClass(PyTango.DeviceClass):
         'getTemperature':
         [[PyTango.DevVoid, ""],
             [PyTango.DevVarFloatArray, ""]],
-        'setTimingOrbit': [[
-            PyTango.DevVarULongArray, "Array containing two elements, first corresponds to delay (int), second (bool, 0/1) tells if falling edge is used"
-        ], [
-            PyTango.DevVoid, ""
-        ]],
         'powerDown':
         [[PyTango.DevVoid, ""],
             [PyTango.DevVoid, ""]],
@@ -515,6 +503,18 @@ class XhClass(PyTango.DeviceClass):
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
+        'orbit_delay':
+    [[PyTango.DevLong,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'orbit_delay_falling':
+    [[PyTango.DevBoolean,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
+        'orbit_delay_rising':
+    [[PyTango.DevBoolean,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
         'lemo_out':
     [[PyTango.DevLong,
     PyTango.SPECTRUM,
@@ -547,10 +547,6 @@ class XhClass(PyTango.DeviceClass):
     [[PyTango.DevString,
     PyTango.SCALAR,
     PyTango.WRITE]],
-        'voltage':
-    [[PyTango.DevFloat,
-    PyTango.SCALAR,
-    PyTango.READ_WRITE]],
         'trig_group_mode':
     [[PyTango.DevLong,
     PyTango.SCALAR,
@@ -575,6 +571,10 @@ class XhClass(PyTango.DeviceClass):
     [[PyTango.DevLong,
     PyTango.SCALAR,
     PyTango.READ_WRITE]],
+       'timemode':
+    [[PyTango.DevBoolean,
+    PyTango.SCALAR,
+    PyTango.READ_WRITE]],
     }
 
     def __init__(self,name) :
@@ -591,18 +591,15 @@ class XhClass(PyTango.DeviceClass):
 _XhCam = None
 _XhInterface = None
 
-def get_control(cam_ip_address = "0", port = 1972, config_name = 'config', XH_TIMING_SCRIPT = [], **keys) :
+def get_control(cam_ip_address = "0", port = 1972, config_name = 'config', XH_TIMING_SCRIPT = [], clock_factor = 1., **keys) :
     global _XhCam
     global _XhInterface
     
     if _XhCam is None:
-        print (cam_ip_address)
-        print (port)
-        print (config_name)
         #	Core.DebParams.setTypeFlags(Core.DebParams.AllFlags)
         # XH_TIMING_SCRIPT must be converted to list of strings. By default the type is StdStringArray which is not consumed in cpp
         # when argument type is std::vector<std::string>
-        _XhCam = XhAcq.Camera(cam_ip_address, int(port), config_name, list(XH_TIMING_SCRIPT))
+        _XhCam = XhAcq.Camera(cam_ip_address, int(port), config_name, list(XH_TIMING_SCRIPT), float(clock_factor))
         _XhInterface = XhAcq.Interface(_XhCam)
     return Core.CtControl(_XhInterface)
 

@@ -52,7 +52,7 @@ namespace Xh
 	};
 
 
-	Camera(std::string hostname, int port, std::string configName, std::vector<std::string> XH_TIMING_SCRIPT);
+	Camera(std::string hostname, int port, std::string configName, std::vector<std::string> XH_TIMING_SCRIPT, float clock_factor);
 	~Camera();
 
 	void init();
@@ -201,8 +201,6 @@ namespace Xh
 	void setDefaultTimingParameters(XhTimingParameters& timingParams);
 	void setTimingGroup(int groupNum, int nframes, int nscans, int intTime, bool last, const XhTimingParameters& timingParams);
 	void modifyTimingGroup(int group_num, int fixed_reset=-1, bool last=false, bool allowExcess=false);
-
-	void setTimingOrbit(int delay, bool use_falling_edge=false);
 	void getTimingInfo(unsigned int* buff, int firstParam, int nParams, int firstGroup, int nGroups);
 	void continueAcq();
 	void setLedTiming(int pause_time, int frame_time, int int_time, bool wait_for_trig);
@@ -289,6 +287,16 @@ namespace Xh
 	void getCapa(double& capa);
 	void setCapa(double capa);
 
+	void getTimeMode(bool& timeMode);
+	void setTimeMode(bool timeMode);
+
+	void setOrbitDelayRising(double orbit_delay_rising);
+	void getOrbitDelayRising(double& orbit_delay_rising);
+	void setOrbitDelayFalling(double orbit_delay_falling);
+	void getOrbitDelayFalling(double& orbit_delay_falling);
+	void setOrbitDelay(double orbit_delay);
+	void getOrbitDelay(double& orbit_delay);
+
 	void setNbScans(int nb_scans);
 	void getNbScans(int& nb_scans /Out/);
     void getMaxFrames(std::string& nframes /Out/);
@@ -300,6 +308,15 @@ namespace Xh
 	void setBin(const Bin &binning);
 	void getBin(Bin &binning /Out/);
 	void checkBin(Bin &binning);
+
+	void setTrigGroupMode(int trig_mode);
+	void getTrigGroupMode(int& trig_mode);
+
+	void setTrigScanMode(int trig_mode);
+	void getTrigScanMode(int& trig_mode);
+
+	void setTrigFrameMode(int trig_mode);
+	void getTrigFrameMode(int& trig_mode);
 
 	void coolDown();
 	void powerDown();
