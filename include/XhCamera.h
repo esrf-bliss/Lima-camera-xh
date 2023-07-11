@@ -384,7 +384,7 @@ namespace lima {
 				TrigMode m_trigger_mode;
 				double m_exp_time;
 				ImageType m_image_type;
-				int m_nb_frames; // nos of frames to acquire
+				int m_nb_frames_to_collect; // nos of frames to acquire
 				bool m_thread_running;
 				bool m_wait_flag;
 				bool m_quit;
