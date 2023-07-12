@@ -53,6 +53,7 @@ DEB_CLASS_NAMESPC(DebModCamera, "Camera", "AcqThread");
 public:
 	AcqThread(Camera &aCam);
 	virtual ~AcqThread();
+	bool m_thread_started;
 
 protected:
 	virtual void threadFunction();
@@ -77,6 +78,8 @@ m_acq_frame_nb(0), m_exp_time(1.0), m_bufferCtrlObj() {
 	m_xh_timing_scripts = XH_TIMING_SCRIPT;
 	m_acq_thread = new AcqThread(*this);
 	m_acq_thread->start();
+	m_wait_flag = true;
+	m_quit = false;
 	m_xh = new XhClient();
 	setRoi(Roi(0,0,0,0));
 	init();
@@ -86,7 +89,7 @@ Camera::~Camera() {
 	DEB_DESTRUCTOR();
 	m_xh->disconnectFromServer();
 	delete m_xh;
-	delete m_acq_thread;
+	stopAcqThread();
 }
 
 void Camera::init() {
@@ -142,6 +145,8 @@ void Camera::reset() {
 
 void Camera::_prepareAcq() {
 	sendCommand("xstrip timing ext-output " + m_sysName + " -1 integration");
+	// stopAcqThread();
+	m_acq_thread = new AcqThread(*this);
 	int bunch = (int) m_exp_time;
 	int cycles_time = bunch;
 	int quarter = 0;
@@ -229,8 +234,14 @@ void Camera::startAcq() {
 	getExpTime(exposure_time);
 	int mexptime = (int) round(exposure_time); // in cycles
 	std::cout << "CALL START ACQ " << std::endl;
+	// m_acq_thread->start();
 	if (m_trigger_mode == IntTrigMult) {
-		// m_acq_frame_nb = 0;
+		m_acq_frame_nb = 0;
+		// std::cout << "GENERATE SOFTWARE TRIGGER: " << m_acq_thread->m_thread_started << std::endl;
+		// if (m_acq_thread->m_thread_started) {
+		// 	generateSoftwareTrigger();
+		// 	return;
+		// }
 		// m_nb_frames_to_collect = 1;
 		// if (mexptime !=0) {
 			if (m_nb_groups == 0) {
@@ -256,20 +267,34 @@ void Camera::startAcq() {
 	m_quit = false;
 	m_cond.broadcast();
 	// aLock.unlock();
-	std::cout << "STARTING ACQ... " << m_thread_running <<std::endl;
+	std::cout << "STARTING ACQ... thread running: " << m_thread_running <<std::endl;
 	// Wait that Acq thread start if it's an external trigger
 	while (m_trigger_mode == ExtTrigMult && !m_thread_running)
 		m_cond.wait();
 }
 
-void Camera::stopAcq() {
+void Camera::_stopAcq() {
 	std::cout << "STOP ACQ" <<std::endl;
 	DEB_MEMBER_FUNCT();
 	AutoMutex aLock(m_cond.mutex());
-	while (m_thread_running)
-		m_cond.wait();
-	m_wait_flag = true;
-	aLock.unlock();
+	if (!m_wait_flag) {
+		while (m_thread_running) { // still acquiring
+			m_wait_flag = true;
+			m_cond.broadcast();
+			m_cond.wait();
+		}
+
+		aLock.unlock();
+	// TODO: should send stop acq to camera?
+	// stopAcqThread();
+	} else {
+		DEB_TRACE() << "Called one more time, already stopped or about to be stopped";
+	}
+}
+
+void Camera::stopAcq() {
+	DEB_MEMBER_FUNCT();
+	_stopAcq();
 }
 
 void Camera::readFrame(void *bptr, int frame_nb, int nframes) {
@@ -297,56 +322,67 @@ void Camera::readFrame(void *bptr, int frame_nb, int nframes) {
 	}
 }
 
+void Camera::setStatus(XhStatus::XhState status) {
+	AutoMutex aLock(m_cond.mutex());
+	// if (Camera::Fault != m_status) {
+	// }
+	m_status = status;
+}
+
 void Camera::getStatus(XhStatus& status) {
 	DEB_MEMBER_FUNCT();
-	stringstream cmd, parser;
-	string str;
-	unsigned pos, pos2;
-	DEB_TRACE() << "xh status read";
-	cmd << "xstrip timing read-status " << m_sysName;
-	AutoMutex aLock(m_cond.mutex());
-	DEB_TRACE() << "xh status send wait";
-	m_xh->sendWait(cmd.str(), str);
-	aLock.unlock();
-	DEB_TRACE() << "xh status " << str;
-	std::cout << "STATUS: " << str << std::endl;
-	pos = str.find(":");
-	string state = str.substr (2, pos-2);
-	if (state.compare("Idle") == 0) {
-		status.state = XhStatus::Idle;
-	} else if (state.compare("Paused at frame") == 0) {
-		status.state = XhStatus::PausedAtFrame;
-	} else if (state.compare("Paused at group") == 0) {
-		status.state = XhStatus::PausedAtGroup;
-	} else if (state.compare("Paused at scan") == 0) {
-		status.state = XhStatus::PausedAtScan;
-	} else {
-		status.state = XhStatus::Running;
-	}
-	pos = str.find("=");
-	pos2 = str.find(",", pos);
-	std::stringstream ss1(str.substr(pos+1, pos2-pos));
-	ss1 >> status.group_num ;
-	pos = str.find("=", pos+1);
-	pos2 = str.find(",", pos);
-	std::stringstream ss2(str.substr(pos+1, pos2-pos));
-	ss2 >> status.frame_num;
-	pos = str.find("=", pos+1);
-	pos2 = str.find(",", pos);
-	std::stringstream ss3(str.substr(pos+1, pos2-pos));
-	ss3 >> status.scan_num;
-	pos = str.find("=", pos+1);
-	pos2 = str.find(",", pos);
-	std::stringstream ss4(str.substr(pos+1, pos2-pos));
-	ss4 >> status.cycle;
-	pos = str.find("=", pos+1);
-	pos2 = str.find(",", pos);
-	std::stringstream ss5(str.substr(pos+1, pos2-pos));
-	ss5 >> status.completed_frames;
+	status.state = m_status;
+	// if (m_status == Camera::ReadOut && m_trigger_mode == IntTrigMult) {
+	// 	status.state = Camera::XhStatus::Idle;
+	// }
+	// stringstream cmd, parser;
+	// string str;
+	// unsigned pos, pos2;
+	// DEB_TRACE() << "xh status read";
+	// cmd << "xstrip timing read-status " << m_sysName;
+	// AutoMutex aLock(m_cond.mutex());
+	// DEB_TRACE() << "xh status send wait";
+	// m_xh->sendWait(cmd.str(), str);
+	// // aLock.unlock();
+	// DEB_TRACE() << "xh status " << str;
+	// pos = str.find(":");
+	// string state = str.substr (2, pos-2);
+	// if (state.compare("Idle") == 0) {
+	// 	status.state = XhStatus::Idle;
+	// } else if (state.compare("Paused at frame") == 0) {
+	// 	status.state = XhStatus::PausedAtFrame;
+	// } else if (state.compare("Paused at group") == 0) {
+	// 	status.state = XhStatus::PausedAtGroup;
+	// } else if (state.compare("Paused at scan") == 0) {
+	// 	status.state = XhStatus::PausedAtScan;
+	// } else {
+	// 	status.state = XhStatus::Running;
+	// }
+	// pos = str.find("=");
+	// pos2 = str.find(",", pos);
+	// std::stringstream ss1(str.substr(pos+1, pos2-pos));
+	// ss1 >> status.group_num ;
+	// pos = str.find("=", pos+1);
+	// pos2 = str.find(",", pos);
+	// std::stringstream ss2(str.substr(pos+1, pos2-pos));
+	// ss2 >> status.frame_num;
+	// pos = str.find("=", pos+1);
+	// pos2 = str.find(",", pos);
+	// std::stringstream ss3(str.substr(pos+1, pos2-pos));
+	// ss3 >> status.scan_num;
+	// pos = str.find("=", pos+1);
+	// pos2 = str.find(",", pos);
+	// std::stringstream ss4(str.substr(pos+1, pos2-pos));
+	// ss4 >> status.cycle;
+	// pos = str.find("=", pos+1);
+	// pos2 = str.find(",", pos);
+	// std::stringstream ss5(str.substr(pos+1, pos2-pos));
+	// ss5 >> status.completed_frames;
 
-	DEB_TRACE() << "XhStatus.state is [" << status.state << "]";
-	DEB_TRACE() << "XhStatus group " << status.group_num << " frame " << status.frame_num << " scan " << status.scan_num;
-	DEB_TRACE() << "XhStatus cycles " << status.cycle << " completed " << status.completed_frames;
+	// // std::cout << "I cal get status: " << str << " : " << status.state << " : Compleated frames: " << status.completed_frames << std::endl;
+	// DEB_TRACE() << "XhStatus.state is [" << status.state << "]";
+	// DEB_TRACE() << "XhStatus group " << status.group_num << " frame " << status.frame_num << " scan " << status.scan_num;
+	// DEB_TRACE() << "XhStatus cycles " << status.cycle << " completed " << status.completed_frames;
 }
 
 int Camera::getNbHwAcquiredFrames() {
@@ -358,12 +394,33 @@ void Camera::AcqThread::threadFunction() {
 	DEB_MEMBER_FUNCT();
 	StdBufferCbMgr& buffer_mgr = m_cam.m_bufferCtrlObj.getBuffer();
 	std::cout << "threadFunction 1" << std::endl;
+	bool continueFlag = true;
+	m_thread_started = true;
+	AutoMutex aLock(m_cam.m_cond.mutex());
 
 	while (!m_cam.m_quit) {
-		AutoMutex aLock(m_cam.m_cond.mutex());
 		std::cout << "threadFunction 2" << std::endl;
+
+		bool doBreak = false;
+
 		while (m_cam.m_wait_flag && !m_cam.m_quit) {
 			std::cout << "threadFunction 3. Stopped" << m_cam.m_acq_frame_nb << " : " << m_cam.m_nb_frames_to_collect<< std::endl;
+			// if (m_cam.m_trigger_mode == IntTrigMult) {
+			// 	std::cout << "is internal trigger" << std::endl;
+			// 	while (!m_cam.isSoftwareTriggerActive()) {
+					
+			// 		// std::cout << "software trigger not active" << std::endl;
+			// 		// if (m_cam.m_quit) {
+			// 			doBreak = true;
+			// 			break;
+			// 		// }
+			// 		std::cout << "no quit set" << std::endl;
+			// 	}
+
+			// 	if (m_cam.m_quit || doBreak) {
+			// 		break;
+			// 	}
+			// }
 			DEB_TRACE() << "Wait";
 			// m_cam.m_status ;
 			m_cam.m_thread_running = false;
@@ -379,44 +436,44 @@ void Camera::AcqThread::threadFunction() {
 
 		m_cam.m_cond.broadcast();
 		aLock.unlock();
-		// m_cam.setStatus(XhStatus.XState.Running)
 
-		bool continueFlag = true;
 		std::cout << "threadFunction 5" << std::endl;
 		std::cout << "____Frames asked: " << m_cam.m_nb_frames_to_collect << std::endl;
-		while (continueFlag && (!m_cam.m_nb_frames_to_collect || m_cam.m_acq_frame_nb < m_cam.m_nb_frames_to_collect)) {
+		while (continueFlag && (m_cam.m_nb_frames_to_collect == 0 || m_cam.m_acq_frame_nb < m_cam.m_nb_frames_to_collect)) {
+			m_cam.setStatus(Camera::XhStatus::Running);
 			std::cout << "threadFunction 5.5 Continue flag:" << continueFlag << " mnb frames: " << m_cam.m_nb_frames_to_collect << " acq frame nb: " << m_cam.m_acq_frame_nb << std::endl;
 			std::cout << "while" << std::endl;
 			Bin bin; m_cam.getBin(bin);
 			std::cout << "while 2" << std::endl;
 			int bin_size_x = bin.getX();
 			std::cout << "while 3" << std::endl;
-			aLock.lock();
-			bool is_to_out = !m_cam.m_wait_flag && !m_cam.m_quit;
-			m_cam.m_thread_running = is_to_out;
-			m_cam.m_cond.broadcast();
-			aLock.unlock();
-			XhStatus status;
-			m_cam.getStatus(status);
+			// aLock.lock();
+			// bool is_to_out = !m_cam.m_wait_flag && !m_cam.m_quit;
+			// m_cam.m_thread_running = is_to_out;
+			// m_cam.m_cond.broadcast();
+			// aLock.unlock();
+			// XhStatus status;
+			// m_cam.getStatus(status);
 			std::cout << "while 4" << std::endl;
 			// if (status.state == XhStatus.Fault) {
 				// continueFlag = False;
 				// m_cam._setStatus(XhStatus.Fault);
 			// }
-			std::cout << "Status" << status.state <<  " Frames: " << status.completed_frames << " : " << m_cam.m_acq_frame_nb << std::endl;
-			if (status.state == XhStatus::Idle || (status.completed_frames > m_cam.m_acq_frame_nb) ) {
+			// std::cout << "Status" << status.state <<  " Frames: " << status.completed_frames << " : " << m_cam.m_acq_frame_nb << std::endl;
+			// if (status.state == XhStatus::Idle || (status.completed_frames > m_cam.m_acq_frame_nb) ) {
 
 				int nframes;
 				nframes = m_cam.m_nb_frames_to_collect;
-				if (m_cam.m_trigger_mode == IntTrigMult) {
+				if (m_cam.m_trigger_mode == IntTrig) {
 					nframes = 1;
-				} else
-				if (status.state == status.Idle) {
-					nframes = m_cam.m_nb_frames_to_collect - m_cam.m_acq_frame_nb;
-				} else {
-					nframes = status.completed_frames - m_cam.m_acq_frame_nb;
 				}
-				std::cout << "____Compleated frames: " << status.completed_frames << " acq_frame: " << m_cam.m_acq_frame_nb << " : m_nb_frames_to_collect:" << nframes << std::endl;
+				// else
+				// if (status.state == status.Idle) {
+				// 	nframes = m_cam.m_nb_frames_to_collect - m_cam.m_acq_frame_nb;
+				// } else {
+				// 	nframes = status.completed_frames - m_cam.m_acq_frame_nb;
+				// }
+				// std::cout << "____Compleated frames: " << status.completed_frames << " acq_frame: " << m_cam.m_acq_frame_nb << " : m_nb_frames_to_collect:" << nframes << std::endl;
 				int32_t *dptr, *baseptr;
 				int npoints = m_cam.m_npixels;
 				if (m_cam.m_image_type == Bpp16) {
@@ -464,38 +521,53 @@ void Camera::AcqThread::threadFunction() {
 					continueFlag = buffer_mgr.newFrameReady(frame_info);
 					DEB_TRACE() << "acqThread::threadFunction() newframe ready ";
 					++m_cam.m_acq_frame_nb;
+
+					// if (continueFlag && m_cam.m_trigger_mode == IntTrigMult) {
+					// 	continueFlag == false;
+					// }
 				}
 				free(baseptr);
-			} 
-			else {
-				AutoMutex aLock(m_cam.m_cond.mutex());
-				continueFlag = !m_cam.m_wait_flag;
-				std::cout << "END ACQ. Mutex" << std::endl;
-				if (m_cam.m_wait_flag) {
-					stringstream cmd;
-					cmd << "xstrip timing stop " << m_cam.m_sysName;
-					m_cam.m_xh->sendWait(cmd.str());
-				} else {
-					usleep(1000);
-				}
-		}
+		// 	} 
+		// 	else {
+		// 		AutoMutex aLock(m_cam.m_cond.mutex());
+		// 		continueFlag = !m_cam.m_wait_flag;
+		// 		std::cout << "END ACQ. Mutex" << std::endl;
+		// 		if (m_cam.m_wait_flag) {
+		// 			stringstream cmd;
+		// 			cmd << "xstrip timing stop " << m_cam.m_sysName;
+		// 			m_cam.m_xh->sendWait(cmd.str());
+		// 		} else {
+		// 			usleep(1000);
+		// 		}
+		// }
 
 			DEB_TRACE() << "acquired " << m_cam.m_acq_frame_nb << " frames, required " << m_cam.m_nb_frames_to_collect << " frames";
 		
 		}
 		
 		std::cout << "END ACQ. Frames acquired: " << m_cam.m_acq_frame_nb << std::endl;
+		// m_cam.m_cond.mutex();
+		// std::cout << "END ACQ. Mutex" << std::endl;
+		stringstream cmd;
+		cmd << "xstrip timing stop " << m_cam.m_sysName;
+		m_cam.m_xh->sendWait(cmd.str());
+		m_cam.setStatus(Camera::XhStatus::Idle);
 		aLock.lock();
 		m_cam.m_wait_flag = true;
+		// m_cam._stopAcq();
+		// if (m_cam.m_wait_flag) {
+		// 	stringstream cmd;
+		// 	cmd << "xstrip timing stop " << m_cam.m_sysName;
+		// 	m_cam.m_xh->sendWait(cmd.str());
+		// } else {
+		// 	usleep(1000);
+		// }
+		// aLock.unlock();
 	}
 }
 
 Camera::AcqThread::AcqThread(Camera& cam) :
 		m_cam(cam) {
-	AutoMutex aLock(m_cam.m_cond.mutex());
-	m_cam.m_wait_flag = true;
-	m_cam.m_quit = false;
-	aLock.unlock();
 	pthread_attr_setscope(&m_thread_attr, PTHREAD_SCOPE_PROCESS);
 }
 
@@ -1149,7 +1221,7 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 		setTrigMode(IntTrigMult);
 	}
 	if (last) {
-		// m_nb_frames_to_collect = num_frames;
+		m_nb_frames_to_collect = num_frames;
 	}
 	DEB_TRACE() << "m_nb_frames_to_collect " << m_nb_frames_to_collect;
 }
@@ -2216,3 +2288,24 @@ void Camera::uninterleave(bool uninterleave) {
 	}
 }
 
+void Camera::generateSoftwareTrigger() {
+	DEB_MEMBER_FUNCT();
+	m_software_trigger = true;
+}
+
+bool Camera::isSoftwareTriggerActive() {
+	DEB_MEMBER_FUNCT();
+	if (m_software_trigger) {
+		m_software_trigger = false;
+		return true;
+	}
+	return false;
+}
+
+void Camera::stopAcqThread() {
+	if (m_acq_thread->hasStarted() && !m_acq_thread->hasFinished()) {
+		m_quit = true;
+	}
+	delete m_acq_thread;
+	m_acq_thread = NULL;
+}

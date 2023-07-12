@@ -82,7 +82,9 @@ namespace lima {
 				void prepareAcq();
 				void startAcq();
 				void stopAcq();
+				void _stopAcq();
 				void getStatus(XhStatus& status);
+				void setStatus(XhStatus::XhState state);
 				int getNbHwAcquiredFrames();
 
 				// -- detector info object
@@ -361,6 +363,10 @@ namespace lima {
 				void powerDown();
 				void configXh();
 
+				void generateSoftwareTrigger();
+				bool isSoftwareTriggerActive();
+				void stopAcqThread();
+
 				string getTimingScript() const;
 
 			private:
@@ -372,6 +378,8 @@ namespace lima {
 				string m_sysName;
 				float m_clock_factor;
 				// float m_bunch_factor;
+
+				XhStatus::XhState m_status;
 
 				int m_uninterleave;
 				int m_npixels;
@@ -406,6 +414,7 @@ namespace lima {
 				bool m_orbit_delay_rising;				
 				bool m_time_mode;
 				int m_interal_trigger_multi_repetitions;
+				bool m_software_trigger;
 
 				int m_trig_group_mode = 0;
 				int m_trig_frame_mode = 0;

@@ -60,7 +60,9 @@ namespace Xh
 	void prepareAcq();
 	void startAcq();
 	void stopAcq();
+	void _stopAcq();
 	void getStatus(XhStatus& status /Out/);
+	void setStatus(XhStatus::XhState state);
 	int getNbHwAcquiredFrames();
 
 	// -- detector info object
@@ -321,6 +323,10 @@ namespace Xh
 	void coolDown();
 	void powerDown();
 	void configXh();
+
+	void generateSoftwareTrigger();
+	bool isSoftwareTriggerActive();
+	void stopAcqThread();
 
 	std::string getTimingScript() const;
 	

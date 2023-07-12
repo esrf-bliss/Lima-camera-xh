@@ -105,7 +105,7 @@ void Interface::startAcq() {
 
 void Interface::stopAcq() {
 	DEB_MEMBER_FUNCT();
-	m_cam.stopAcq();
+	m_cam._stopAcq();
 }
 
 void Interface::getStatus(StatusType& status) {
@@ -113,23 +113,23 @@ void Interface::getStatus(StatusType& status) {
 	Camera::XhStatus xhStatus;
 	m_cam.getStatus(xhStatus);
 	switch (xhStatus.state) {
-	case Camera::XhStatus::Idle:
-		status.acq = AcqReady;
-		status.det = DetIdle;
-		// std::cout << "Camera idle" << std::endl;
-		break;
-	case Camera::XhStatus::PausedAtGroup:
-	case Camera::XhStatus::PausedAtFrame:
-	case Camera::XhStatus::PausedAtScan:
-		status.det = DetWaitForTrigger;
-		status.acq = AcqRunning;
-		std::cout << "Camera paused" << std::endl;
-		break;
-	case Camera::XhStatus::Running:
-		status.det = DetExposure;
-		status.acq = AcqRunning;
-		std::cout << "Camera running" << std::endl;
-		break;
+		case Camera::XhStatus::Idle:
+			status.acq = AcqReady;
+			status.det = DetIdle;
+			std::cout << "Camera idle" << std::endl;
+			break;
+		case Camera::XhStatus::PausedAtGroup:
+		case Camera::XhStatus::PausedAtFrame:
+		case Camera::XhStatus::PausedAtScan:
+			status.det = DetWaitForTrigger;
+			status.acq = AcqRunning;
+			std::cout << "Camera paused" << std::endl;
+			break;
+		case Camera::XhStatus::Running:
+			status.det = DetExposure;
+			status.acq = AcqRunning;
+			std::cout << "Camera running" << std::endl;
+			break;
 	}
 }
 
