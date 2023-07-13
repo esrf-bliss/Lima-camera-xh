@@ -67,9 +67,24 @@ private:
 //---------------------------
 
 Camera::Camera(string hostname, int port, string configName, std::vector<std::string> XH_TIMING_SCRIPT, float clock_factor) :
-m_hostname(hostname), m_port(port), m_configName(configName), m_sysName("'xh0'"), m_clock_factor(clock_factor), m_orbit_delay_rising(true),
-m_orbit_delay_falling(false), m_uninterleave(false), m_nb_groups(1), m_npixels(1024), m_image_type(Bpp32), m_nb_frames_to_collect(1), 
-m_acq_frame_nb(0), m_exp_time(1.0), m_bufferCtrlObj() {
+	m_hostname(hostname),
+	m_port(port),
+	m_configName(configName),
+	m_sysName("'xh0'"),
+	m_clock_factor(clock_factor),
+	m_orbit_delay_rising(true),
+	m_orbit_delay_falling(false),
+	m_uninterleave(false),
+	m_nb_groups(1),
+	m_npixels(1024),
+	m_image_type(Bpp32),
+	m_nb_frames_to_collect(1),
+	m_acq_frame_nb(0),
+	m_exp_time(1.0),
+	m_bufferCtrlObj(),
+	m_wait_flag(true),
+	m_quit(false)
+{
 	DEB_CONSTRUCTOR();
 
 //	DebParams::setModuleFlags(DebParams::AllFlags);
@@ -78,8 +93,7 @@ m_acq_frame_nb(0), m_exp_time(1.0), m_bufferCtrlObj() {
 	m_xh_timing_scripts = XH_TIMING_SCRIPT;
 	m_acq_thread = new AcqThread(*this);
 	m_acq_thread->start();
-	m_wait_flag = true;
-	m_quit = false;
+
 	m_xh = new XhClient();
 	setRoi(Roi(0,0,0,0));
 	init();
@@ -105,6 +119,7 @@ void Camera::init() {
 	}
 	DEB_TRACE() << "da.server assigned dataport " << dataPort;
 	if (m_configName.length() != 0) {
+		// TODO: uncomment
 		// cmd1 << "~" << m_configName;
 		// m_xh->sendWait(cmd1.str());
 	}
@@ -145,7 +160,6 @@ void Camera::reset() {
 
 void Camera::_prepareAcq() {
 	sendCommand("xstrip timing ext-output " + m_sysName + " -1 integration");
-	// stopAcqThread();
 	m_acq_thread = new AcqThread(*this);
 	int bunch = (int) m_exp_time;
 	int cycles_time = bunch;
@@ -157,29 +171,18 @@ void Camera::_prepareAcq() {
 		if (quarter > 3)
 			quarter = 3;
 	}
+	
 	setS2Delay(quarter);
-	// setExpTime(cycles_time);
+	setExpTime(cycles_time);
 
-	// if (m_trig_group_mode == 1)
-	// 	setCustomTriggerMode("group_trigger");
-	// else if (m_trig_group_mode == 2) {
-	// 	setCustomTriggerMode("group_orbit");
-	// 	setOrbitTrig(3);
-	// }
+	if (m_trig_group_mode)
+		setTrigGroupMode(m_trig_group_mode);
 
-	// if (m_trig_frame_mode == 1)
-	// 	setCustomTriggerMode("frame_trigger");
-	// else if (m_trig_frame_mode == 2) {
-	// 	setCustomTriggerMode("frame_orbit");
-	// 	setOrbitTrig(3);
-	// }
+	if (m_trig_frame_mode)
+		setTrigFrameMode(m_trig_frame_mode);
 
-	// if (m_trig_scan_mode == 1)
-	// 	setCustomTriggerMode("scan_trigger");
-	// else if (m_trig_scan_mode == 2) {
-	// 	setCustomTriggerMode("scan_orbit");
-	// 	setOrbitTrig(3);
-	// }
+	if (m_trig_scan_mode)
+		setTrigScanMode(m_trig_scan_mode);
 	
 	std::vector<int> lemos;
 	lemos.push_back(65535);
@@ -191,41 +194,34 @@ void Camera::prepareAcq() {
 	double exposure_time;
 	getExpTime(exposure_time);
 	int mexptime = (int) round(m_exp_time); // in cycles
-	std::cout << "PREPRAE ACQ: " << std::endl;
 	_prepareAcq();
 	DEB_TRACE() << " nb frames : " << m_nb_frames_to_collect;
 	DEB_TRACE() << " nb scans  : " << m_nb_scans;
 	DEB_TRACE() << " exp time  : " << m_exp_time;
 	m_acq_frame_nb = 0;
-	// if (m_trigger_mode == IntTrigMult) {
-	// 	++m_nb_frames_to_collect;
-	// }
-		if (m_trigger_mode != IntTrigMult) {
-			std::cout << "PREPRAE ACQ PRESET TIMING GROUP: " << std::endl;
-			// if (mexptime !=0) {
-				if (m_trigger_mode) {
-					if (m_exp_time != 0) {
-						if (m_nb_groups == 0) {
-							THROW_HW_ERROR(Error) << "Number of groups must be bigger than 0";
-						}
-						for(int i = 0; i < m_nb_groups; i++) {
-							bool last = false;
-							if (i == m_nb_groups - 1) // mark last group with 'last' keyword
-								last = true;
-							std::cout << "PREPRAE ACQ SET TIMING GROUP: " << i << std::endl;
-							
-							setTimingGroup(i, m_nb_frames_to_collect, m_nb_scans, mexptime, last, m_timingParams);
-						}
-					} else {
-						int total_frames;
-						getTotalFrames(total_frames);
-						std::cout << "TOTAL: " << total_frames << " :M NB: " << m_nb_frames_to_collect  << std::endl;
-						if (m_nb_frames_to_collect != total_frames)
-							THROW_HW_ERROR(Error) << " Trying to collect a different number of frames than is currently configured ";		
-					}
-				}
-			// }
+	// if (m_trigger_mode != IntTrigMult) {
+		if (exposure_time != 0) {
+			if (m_nb_groups == 0) {
+				THROW_HW_ERROR(Error) << "Number of groups must be bigger than 0";
+			}
+			float nb_frames_for_group = float(m_nb_frames_to_collect) / float(m_nb_groups);
+			if (std::floor(nb_frames_for_group) != nb_frames_for_group) {
+				THROW_HW_ERROR(Error) << "Number of frames must be a multiple of number of groups";
+			}
+			for(int i = 0; i < m_nb_groups; i++) {
+				bool last = false;
+				if (i == m_nb_groups - 1) // mark last group with 'last' keyword
+					last = true;
+				
+				setTimingGroup(i, nb_frames_for_group, m_nb_scans, mexptime, last, m_timingParams);
+			}
+		} else {
+			int total_frames;
+			getTotalFrames(total_frames);
+			if (m_nb_frames_to_collect != total_frames)
+				THROW_HW_ERROR(Error) << " Trying to collect a different number of frames than is currently configured ";		
 		}
+	// }
 }
 
 void Camera::startAcq() {
@@ -233,30 +229,39 @@ void Camera::startAcq() {
 	double exposure_time;
 	getExpTime(exposure_time);
 	int mexptime = (int) round(exposure_time); // in cycles
-	std::cout << "CALL START ACQ " << std::endl;
-	// m_acq_thread->start();
 	if (m_trigger_mode == IntTrigMult) {
-		m_acq_frame_nb = 0;
-		// std::cout << "GENERATE SOFTWARE TRIGGER: " << m_acq_thread->m_thread_started << std::endl;
-		// if (m_acq_thread->m_thread_started) {
-		// 	generateSoftwareTrigger();
-		// 	return;
+		generateSoftwareTrigger();
+		// if (m_nb_groups == 0) {
+		// 	THROW_HW_ERROR(Error) << "Number of groups must be bigger than 0";
 		// }
-		// m_nb_frames_to_collect = 1;
-		// if (mexptime !=0) {
-			if (m_nb_groups == 0) {
-				THROW_HW_ERROR(Error) << "Number of groups must be bigger than 0";
-			}
-			for(int i = 0; i < m_nb_groups; i++) {
-				bool last = false;
-				if (i == m_nb_groups - 1) // mark last group with 'last' keyword
-					last = true;
+	
+		// float nb_frames_for_group = float(m_nb_frames_to_collect) / float(m_nb_groups);
+		// if (std::floor(nb_frames_for_group) != nb_frames_for_group) {
+		// 	THROW_HW_ERROR(Error) << "Number of frames must be a multiple of number of groups";
+		// }
 
-				setTimingGroup(i, 1, m_nb_scans, mexptime, last, m_timingParams);
-			
-			}
+		// std::cout << "NF FRAMES TO COLLECT: " << nb_frames_for_group <<std::endl;
+		// std::cout << "Already acquired: " << m_acq_frame_nb <<std::endl;
+		// std::cout << "total nb frames to collect: " << m_nb_frames_to_collect << std::endl;
+		// if (m_nb_frames_to_collect % (m_acq_frame_nb + 1) == 0) {
+		// 	int current_group_nb = m_acq_frame_nb % m_nb_groups;
+		// 	std::cout << "Current group: " << current_group_nb <<std::endl;
+		// 	bool last = false;
+		// 	// if (((current_group_nb + 1) * nb_frames_for_group) == m_nb_frames_to_collect)
+		// 			last = true;
+		// 	setTimingGroup(current_group_nb, nb_frames_for_group, m_nb_scans, mexptime, last, m_timingParams);
 		// }
 	}
+		// TODO: make sure its an integer
+		// if (m_nb_frames_to_collect % m_acq_frame_nb == 0) {
+		// for(int i = 0; i < m_nb_groups; i++) {
+		// 	bool last = false;
+		// 	if (i == m_nb_groups - 1) // mark last group with 'last' keyword
+		// 		last = true;
+
+		// 	// In IntTrigMult for each start acq only one frame is acquired
+		// 	setTimingGroup(i, 1, m_nb_scans, mexptime, last, m_timingParams);
+		
 	stringstream cmd;
 	StdBufferCbMgr& buffer_mgr = m_bufferCtrlObj.getBuffer();
 	buffer_mgr.setStartTimestamp(Timestamp::now());
@@ -266,15 +271,12 @@ void Camera::startAcq() {
 	m_wait_flag = false;
 	m_quit = false;
 	m_cond.broadcast();
-	// aLock.unlock();
-	std::cout << "STARTING ACQ... thread running: " << m_thread_running <<std::endl;
 	// Wait that Acq thread start if it's an external trigger
 	while (m_trigger_mode == ExtTrigMult && !m_thread_running)
 		m_cond.wait();
 }
 
 void Camera::_stopAcq() {
-	std::cout << "STOP ACQ" <<std::endl;
 	DEB_MEMBER_FUNCT();
 	AutoMutex aLock(m_cond.mutex());
 	if (!m_wait_flag) {
@@ -285,8 +287,6 @@ void Camera::_stopAcq() {
 		}
 
 		aLock.unlock();
-	// TODO: should send stop acq to camera?
-	// stopAcqThread();
 	} else {
 		DEB_TRACE() << "Called one more time, already stopped or about to be stopped";
 	}
@@ -323,66 +323,59 @@ void Camera::readFrame(void *bptr, int frame_nb, int nframes) {
 }
 
 void Camera::setStatus(XhStatus::XhState status) {
-	AutoMutex aLock(m_cond.mutex());
-	// if (Camera::Fault != m_status) {
-	// }
 	m_status = status;
 }
 
 void Camera::getStatus(XhStatus& status) {
 	DEB_MEMBER_FUNCT();
-	status.state = m_status;
-	// if (m_status == Camera::ReadOut && m_trigger_mode == IntTrigMult) {
-	// 	status.state = Camera::XhStatus::Idle;
-	// }
-	// stringstream cmd, parser;
-	// string str;
-	// unsigned pos, pos2;
-	// DEB_TRACE() << "xh status read";
-	// cmd << "xstrip timing read-status " << m_sysName;
-	// AutoMutex aLock(m_cond.mutex());
-	// DEB_TRACE() << "xh status send wait";
-	// m_xh->sendWait(cmd.str(), str);
-	// // aLock.unlock();
-	// DEB_TRACE() << "xh status " << str;
-	// pos = str.find(":");
-	// string state = str.substr (2, pos-2);
-	// if (state.compare("Idle") == 0) {
-	// 	status.state = XhStatus::Idle;
-	// } else if (state.compare("Paused at frame") == 0) {
-	// 	status.state = XhStatus::PausedAtFrame;
-	// } else if (state.compare("Paused at group") == 0) {
-	// 	status.state = XhStatus::PausedAtGroup;
-	// } else if (state.compare("Paused at scan") == 0) {
-	// 	status.state = XhStatus::PausedAtScan;
-	// } else {
-	// 	status.state = XhStatus::Running;
-	// }
-	// pos = str.find("=");
-	// pos2 = str.find(",", pos);
-	// std::stringstream ss1(str.substr(pos+1, pos2-pos));
-	// ss1 >> status.group_num ;
-	// pos = str.find("=", pos+1);
-	// pos2 = str.find(",", pos);
-	// std::stringstream ss2(str.substr(pos+1, pos2-pos));
-	// ss2 >> status.frame_num;
-	// pos = str.find("=", pos+1);
-	// pos2 = str.find(",", pos);
-	// std::stringstream ss3(str.substr(pos+1, pos2-pos));
-	// ss3 >> status.scan_num;
-	// pos = str.find("=", pos+1);
-	// pos2 = str.find(",", pos);
-	// std::stringstream ss4(str.substr(pos+1, pos2-pos));
-	// ss4 >> status.cycle;
-	// pos = str.find("=", pos+1);
-	// pos2 = str.find(",", pos);
-	// std::stringstream ss5(str.substr(pos+1, pos2-pos));
-	// ss5 >> status.completed_frames;
+	// status.state = m_status;
+	stringstream cmd, parser;
+	string str;
+	unsigned pos, pos2;
+	DEB_TRACE() << "xh status read";
+	cmd << "xstrip timing read-status " << m_sysName;
+	AutoMutex aLock(m_cond.mutex());
+	DEB_TRACE() << "xh status send wait";
+	m_xh->sendWait(cmd.str(), str);
+	// aLock.unlock();
+	DEB_TRACE() << "xh status " << str;
+	pos = str.find(":");
+	string state = str.substr (2, pos-2);
+	if (state.compare("Idle") == 0) {
+		status.state = XhStatus::Idle;
+	} else if (state.compare("Paused at frame") == 0) {
+		status.state = XhStatus::PausedAtFrame;
+	} else if (state.compare("Paused at group") == 0) {
+		status.state = XhStatus::PausedAtGroup;
+	} else if (state.compare("Paused at scan") == 0) {
+		status.state = XhStatus::PausedAtScan;
+	} else {
+		status.state = XhStatus::Running;
+	}
+	pos = str.find("=");
+	pos2 = str.find(",", pos);
+	std::stringstream ss1(str.substr(pos+1, pos2-pos));
+	ss1 >> status.group_num ;
+	pos = str.find("=", pos+1);
+	pos2 = str.find(",", pos);
+	std::stringstream ss2(str.substr(pos+1, pos2-pos));
+	ss2 >> status.frame_num;
+	pos = str.find("=", pos+1);
+	pos2 = str.find(",", pos);
+	std::stringstream ss3(str.substr(pos+1, pos2-pos));
+	ss3 >> status.scan_num;
+	pos = str.find("=", pos+1);
+	pos2 = str.find(",", pos);
+	std::stringstream ss4(str.substr(pos+1, pos2-pos));
+	ss4 >> status.cycle;
+	pos = str.find("=", pos+1);
+	pos2 = str.find(",", pos);
+	std::stringstream ss5(str.substr(pos+1, pos2-pos));
+	ss5 >> status.completed_frames;
 
-	// // std::cout << "I cal get status: " << str << " : " << status.state << " : Compleated frames: " << status.completed_frames << std::endl;
-	// DEB_TRACE() << "XhStatus.state is [" << status.state << "]";
-	// DEB_TRACE() << "XhStatus group " << status.group_num << " frame " << status.frame_num << " scan " << status.scan_num;
-	// DEB_TRACE() << "XhStatus cycles " << status.cycle << " completed " << status.completed_frames;
+	DEB_TRACE() << "XhStatus.state is [" << status.state << "]";
+	DEB_TRACE() << "XhStatus group " << status.group_num << " frame " << status.frame_num << " scan " << status.scan_num;
+	DEB_TRACE() << "XhStatus cycles " << status.cycle << " completed " << status.completed_frames;
 }
 
 int Camera::getNbHwAcquiredFrames() {
@@ -393,42 +386,19 @@ int Camera::getNbHwAcquiredFrames() {
 void Camera::AcqThread::threadFunction() {
 	DEB_MEMBER_FUNCT();
 	StdBufferCbMgr& buffer_mgr = m_cam.m_bufferCtrlObj.getBuffer();
-	std::cout << "threadFunction 1" << std::endl;
 	bool continueFlag = true;
 	m_thread_started = true;
 	AutoMutex aLock(m_cam.m_cond.mutex());
 
 	while (!m_cam.m_quit) {
-		std::cout << "threadFunction 2" << std::endl;
-
-		bool doBreak = false;
-
 		while (m_cam.m_wait_flag && !m_cam.m_quit) {
-			std::cout << "threadFunction 3. Stopped" << m_cam.m_acq_frame_nb << " : " << m_cam.m_nb_frames_to_collect<< std::endl;
-			// if (m_cam.m_trigger_mode == IntTrigMult) {
-			// 	std::cout << "is internal trigger" << std::endl;
-			// 	while (!m_cam.isSoftwareTriggerActive()) {
-					
-			// 		// std::cout << "software trigger not active" << std::endl;
-			// 		// if (m_cam.m_quit) {
-			// 			doBreak = true;
-			// 			break;
-			// 		// }
-			// 		std::cout << "no quit set" << std::endl;
-			// 	}
-
-			// 	if (m_cam.m_quit || doBreak) {
-			// 		break;
-			// 	}
-			// }
 			DEB_TRACE() << "Wait";
-			// m_cam.m_status ;
 			m_cam.m_thread_running = false;
 			m_cam.m_cond.broadcast();
 			m_cam.m_cond.wait();
 		}
 		DEB_TRACE() << "AcqThread Running";
-		std::cout << "threadFunction 4" << std::endl;
+
 		if (m_cam.m_quit)
 			return;
 		else
@@ -437,43 +407,32 @@ void Camera::AcqThread::threadFunction() {
 		m_cam.m_cond.broadcast();
 		aLock.unlock();
 
-		std::cout << "threadFunction 5" << std::endl;
-		std::cout << "____Frames asked: " << m_cam.m_nb_frames_to_collect << std::endl;
 		while (continueFlag && (m_cam.m_nb_frames_to_collect == 0 || m_cam.m_acq_frame_nb < m_cam.m_nb_frames_to_collect)) {
-			m_cam.setStatus(Camera::XhStatus::Running);
-			std::cout << "threadFunction 5.5 Continue flag:" << continueFlag << " mnb frames: " << m_cam.m_nb_frames_to_collect << " acq frame nb: " << m_cam.m_acq_frame_nb << std::endl;
-			std::cout << "while" << std::endl;
-			Bin bin; m_cam.getBin(bin);
-			std::cout << "while 2" << std::endl;
-			int bin_size_x = bin.getX();
-			std::cout << "while 3" << std::endl;
-			// aLock.lock();
-			// bool is_to_out = !m_cam.m_wait_flag && !m_cam.m_quit;
-			// m_cam.m_thread_running = is_to_out;
-			// m_cam.m_cond.broadcast();
-			// aLock.unlock();
-			// XhStatus status;
-			// m_cam.getStatus(status);
-			std::cout << "while 4" << std::endl;
-			// if (status.state == XhStatus.Fault) {
-				// continueFlag = False;
-				// m_cam._setStatus(XhStatus.Fault);
-			// }
-			// std::cout << "Status" << status.state <<  " Frames: " << status.completed_frames << " : " << m_cam.m_acq_frame_nb << std::endl;
-			// if (status.state == XhStatus::Idle || (status.completed_frames > m_cam.m_acq_frame_nb) ) {
+			XhStatus status;
+			m_cam.getStatus(status);
 
-				int nframes;
-				nframes = m_cam.m_nb_frames_to_collect;
-				if (m_cam.m_trigger_mode == IntTrig) {
-					nframes = 1;
+			int nframes;
+			nframes = m_cam.m_nb_frames_to_collect;
+			if (status.state == status.Idle) {
+				nframes = m_cam.m_nb_frames_to_collect - m_cam.m_acq_frame_nb;
+			} else {
+				nframes = status.completed_frames - m_cam.m_acq_frame_nb;
+			}
+
+			if (m_cam.m_trigger_mode == IntTrigMult) {
+				nframes = 1;
+				if (!m_cam.isSoftwareTriggerActive()) {
+					m_cam.m_wait_flag = true;
+					break;
 				}
-				// else
-				// if (status.state == status.Idle) {
-				// 	nframes = m_cam.m_nb_frames_to_collect - m_cam.m_acq_frame_nb;
-				// } else {
-				// 	nframes = status.completed_frames - m_cam.m_acq_frame_nb;
-				// }
-				// std::cout << "____Compleated frames: " << status.completed_frames << " acq_frame: " << m_cam.m_acq_frame_nb << " : m_nb_frames_to_collect:" << nframes << std::endl;
+			}
+
+			// TODO: what do we do with nb groups?
+			// nframes *= m_cam.m_nb_groups;
+
+			Bin bin; m_cam.getBin(bin);
+			int bin_size_x = bin.getX();
+			if (status.state == XhStatus::Idle || (status.completed_frames > m_cam.m_acq_frame_nb) ) {
 				int32_t *dptr, *baseptr;
 				int npoints = m_cam.m_npixels;
 				if (m_cam.m_image_type == Bpp16) {
@@ -487,14 +446,14 @@ void Camera::AcqThread::threadFunction() {
 				dptr = (int32_t*)malloc(nframes * npoints * sizeof(int32_t));
 
 				baseptr = dptr;
-				// m_cam.readFrame(dptr, m_cam.m_acq_frame_nb, nframes);
-				m_cam.readFrame(dptr, 0, nframes);
+				// m_cam.setStatus(Camera::XhStatus::Exposure);
+				m_cam.readFrame(dptr, m_cam.m_acq_frame_nb, 1);
+				// m_cam.setStatus(Camera::XhStatus::Readout);
 				for (int i=0; i<nframes; i++) {
 					HwFrameInfoType frame_info;
 					frame_info.acq_frame_nb = m_cam.m_acq_frame_nb;
 
 					int32_t* bptr = (int32_t*)buffer_mgr.getFrameBufferPtr(m_cam.m_acq_frame_nb);
-					std::cout << "RUN ACQ GET BUFFER" << std::endl;
 					std::vector<int32_t> dptr_swapped;
 					for (unsigned int j = 0; j < npoints ; j++) {
 						dptr_swapped.push_back(
@@ -512,57 +471,39 @@ void Camera::AcqThread::threadFunction() {
 						width /= bin_size_x;
 						dptr = &dptr_binned[0];
 					} else {
-						std::cout << "NO BINNED" << std::endl;
 						dptr = &dptr_swapped[0];
 					}
-					std::cout << "ROI START: " << start << " WIDTH: " << width << std::endl;
 					memcpy(bptr, dptr + start, width * sizeof(int32_t));
 					dptr += npoints;
 					continueFlag = buffer_mgr.newFrameReady(frame_info);
 					DEB_TRACE() << "acqThread::threadFunction() newframe ready ";
 					++m_cam.m_acq_frame_nb;
-
-					// if (continueFlag && m_cam.m_trigger_mode == IntTrigMult) {
-					// 	continueFlag == false;
-					// }
 				}
+				
 				free(baseptr);
-		// 	} 
-		// 	else {
-		// 		AutoMutex aLock(m_cam.m_cond.mutex());
-		// 		continueFlag = !m_cam.m_wait_flag;
-		// 		std::cout << "END ACQ. Mutex" << std::endl;
-		// 		if (m_cam.m_wait_flag) {
-		// 			stringstream cmd;
-		// 			cmd << "xstrip timing stop " << m_cam.m_sysName;
-		// 			m_cam.m_xh->sendWait(cmd.str());
-		// 		} else {
-		// 			usleep(1000);
-		// 		}
-		// }
+			} else {
+				AutoMutex aLock(m_cam.m_cond.mutex());
+				continueFlag = !m_cam.m_wait_flag;
+				if (m_cam.m_wait_flag) {
+					stringstream cmd;
+					cmd << "xstrip timing stop " << m_cam.m_sysName;
+					m_cam.m_xh->sendWait(cmd.str());
+				} else {
+					usleep(1000);
+				}
+			}
 
-			DEB_TRACE() << "acquired " << m_cam.m_acq_frame_nb << " frames, required " << m_cam.m_nb_frames_to_collect << " frames";
+		DEB_TRACE() << "acquired " << m_cam.m_acq_frame_nb << " frames, required " << m_cam.m_nb_frames_to_collect << " frames";
 		
 		}
 		
-		std::cout << "END ACQ. Frames acquired: " << m_cam.m_acq_frame_nb << std::endl;
-		// m_cam.m_cond.mutex();
-		// std::cout << "END ACQ. Mutex" << std::endl;
-		stringstream cmd;
-		cmd << "xstrip timing stop " << m_cam.m_sysName;
-		m_cam.m_xh->sendWait(cmd.str());
-		m_cam.setStatus(Camera::XhStatus::Idle);
+		if (m_cam.m_trigger_mode == IntTrigMult) {
+			stringstream cmd;
+			cmd << "xstrip timing stop " << m_cam.m_sysName;
+			m_cam.m_xh->sendWait(cmd.str());
+		}
 		aLock.lock();
 		m_cam.m_wait_flag = true;
-		// m_cam._stopAcq();
-		// if (m_cam.m_wait_flag) {
-		// 	stringstream cmd;
-		// 	cmd << "xstrip timing stop " << m_cam.m_sysName;
-		// 	m_cam.m_xh->sendWait(cmd.str());
-		// } else {
-		// 	usleep(1000);
-		// }
-		// aLock.unlock();
 	}
 }
 
@@ -599,7 +540,6 @@ void Camera::getDetectorType(std::string& type) {
 void Camera::getDetectorModel(std::string& model) {
 	DEB_MEMBER_FUNCT();
 	stringstream ss;
-//	ss << "Revision " << xh_get_revision(m_sys);
 	model = ss.str();
 }
 
@@ -670,7 +610,6 @@ void Camera::setExpTime(double exp_time) {
 	} else {
 		m_exp_time = exp_time;
 	}
-	std::cout << "SET EXP TIME" << exp_time  << ":: " << m_exp_time << std::endl;
 	DEB_TRACE() << "Camera::setExpTime ------------------------------>"  << DEB_VAR1(m_exp_time) ;
 }
 
@@ -723,7 +662,6 @@ void Camera::getLatTimeRange(double& min_lat, double& max_lat) const {
 
 void Camera::setNbFrames(int nb_frames) {
 	DEB_MEMBER_FUNCT();
-	std::cout << "NB FRAMES" << nb_frames << std::endl;
 	DEB_TRACE() << "Camera::setNbFrames - " << DEB_VAR1(nb_frames);
 	if (m_nb_frames_to_collect < 0) {
 		THROW_HW_ERROR(Error) << "Number of frames to acquire has not been set";
@@ -736,7 +674,6 @@ void Camera::getNbFrames(int& nb_frames) {
 	DEB_TRACE() << "Camera::getNbFrames";
 	DEB_RETURN() << DEB_VAR1(m_nb_frames_to_collect);
 	nb_frames = m_nb_frames_to_collect;
-	std::cout << "NB FRAMES GET" << m_nb_frames_to_collect << std::endl;
 }
 
 void Camera::getNbScans(int& nb_scans) {
@@ -1221,7 +1158,8 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 		setTrigMode(IntTrigMult);
 	}
 	if (last) {
-		m_nb_frames_to_collect = num_frames;
+		if (m_trigger_mode != IntTrigMult) 
+			m_nb_frames_to_collect = num_frames;
 	}
 	DEB_TRACE() << "m_nb_frames_to_collect " << m_nb_frames_to_collect;
 }
@@ -1345,7 +1283,6 @@ void Camera::getTimingInfo(unsigned int* buff, int firstParam, int nParams, int 
 	m_xh->sendWait(cmd2.str());
 
 //	uint32_t *dptr = (uint32_t *)bptr;
-//	std::cout << *dptr << " " << *(dptr+1) << " " << *(dptr+2) << std::endl;
 }
 
 /**
@@ -1481,7 +1418,6 @@ void Camera::setRoi(const Roi& roi_to_set) {
 	int h = roi_to_set.getSize().getHeight();
 	int x = roi_to_set.getTopLeft().x;
 	int y = roi_to_set.getTopLeft().y;
-	std::cout << "ROI SET 2 X: " << x << " w: " << w << std::endl;
 
 	Roi roi = Roi(x, 0, w, 0);
 	m_roi = roi;
@@ -1573,12 +1509,12 @@ void Camera::setTrigMux(int trigMux) {
 	DEB_MEMBER_FUNCT();
 	// if (trigMux == 9)
 	// 	if (m_timingParams.trigControl & (Camera::XhTrigIn_groupTrigger | Camera::XhTrigIn_frameTrigger | Camera::XhTrigIn_scanTrigger)) {
-			m_timingParams.trigMux = trigMux;
+	// 		m_timingParams.trigMux = trigMux;
 	// 	} else {
 	// 		THROW_HW_ERROR(Error) << "Cannot set trigger mux for current trigger mode";
 	// 	}
 	// if (8 >= trigMux >= 0) {
-	// 	m_timingParams.trigMux = trigMux;
+		m_timingParams.trigMux = trigMux;
 	// }
 	
 
@@ -2253,9 +2189,11 @@ void Camera::powerDown() {
 	m_xh->sendWait("~cooldown_xh");
 }
 
-void Camera::configXh() {
+void Camera::configXh(string config_name) {
 	DEB_MEMBER_FUNCT();
-	m_xh->sendWait("~config_xhx3");
+	string config_name_to_execute = config_name.empty() ? m_configName : config_name;
+	std::cout << config_name_to_execute << std::endl;
+	m_xh->sendWait("~" + config_name_to_execute);
 }
 
 /**

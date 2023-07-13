@@ -288,8 +288,8 @@ class Xh(PyTango.Device_4Impl):
 #==================================================================
 
     @Core.DEB_MEMBER_FUNCT
-    def configXh(self):
-        return  _XhCam.configXh()
+    def configXh(self, argin):
+        return  _XhCam.configXh(argin)
 
 #==================================================================
 #
@@ -474,7 +474,7 @@ class XhClass(PyTango.DeviceClass):
         [[PyTango.DevVoid, ""],
             [PyTango.DevVoid, ""]],
         'configXh':
-        [[PyTango.DevVoid, ""],
+        [[PyTango.DevString, "Config name"],
             [PyTango.DevVoid, ""]],
     }
 		

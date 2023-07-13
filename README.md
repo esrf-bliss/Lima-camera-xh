@@ -26,6 +26,56 @@ Lima is a C++ library which can be used with many different cameras. The library
 
 ## Documentation
 
-The documentation is available [here](https://lima.blissgarden.org)
+### Commands
 
+- *getAttrStringValueList*
+- *reset*
+- *setHeadCaps* <- DevVarULongArray - common interface for setting the feedback capacitators
+- *sendCommand* <- DevString - sends a string command to the device and do not expect output
+- *sendCommandNumber* <- DevString - sends a string command to the device and expect numeric output
+- *sendCommandString* <- DevString - sends a string command to the device and  expect string output
+- *setHighVoltageOn* - sets high voltage
+- *setHighVoltageOff* - disables high voltage
+- *setHeadDac* <- DevFloat - sets DAC to control HV power supply voltage
+- *getAvailableCaps* - lists available Caps
+- *getAvailableTriggerModes* - lists available trigger modes
+- *setXhTimingScript* <- DevString - sets timing script
+- *getTemperature* - gets temperature and returns an array of 4 channels temp
+- *powerDown* - sends cooldown_xh scipr
+- *coolDown* - sends head_powerdown script
+- *configXh* <- DevString - sets config file
 
+### Attributes
+- *clockmode* - setups clock mode to one of: 'XhInternalClock': 0, 'XhESRF5468Mhz': 1, 'XhESRF1136Mhz': 2
+- *nbscans* - defines number of scans. One number can be set and applied to every setup group
+- *nbgroups* - defines number of groups. One number can be set and applied to every setup group
+- *maxframes* - get maximum number of frames
+- *trig_mux* - 
+- *orbit_trigger*
+- *orbit_delay*
+- *orbit_delay_falling*
+- *orbit_delay_rising*
+- *lemo_out*
+- *correct_rounding*
+- *group_delay*
+- *frame_delay*
+- *scan_period*
+- *aux_delay*
+- *aux_width*
+- *custom_trigger_mode* - sets custom trigger mode. Available values are "no_trigger", "group_trigger", "frame_trigger", "scan_trigger", "group_orbit", "frame_orbit", "scan_orbit", "falling_trigger", 
+- *trig_group_mode* - sets triggers based on number provided as attribute:
+        - 0: "no_trigger";
+	    - 1: "group_trigger"
+        - 2: "group_orbit" and sets orbit trig to 3;
+- *trig_frame_mode* - sets triggers based on number provided as attribute:
+    - 0: "no_trigger"
+    - 1: "frame_trigger
+    - 2: "frame_orbit" and orbit trig to 3
+- *trig_scan_mode* - sets triggers based on number provided as attribute:
+    - 0: "no_trigger"
+	- 1: "scan_trigger"
+    - 2: "scan_orbit" and orbit trig to 3;
+- *timing_script* - set timing script
+- *bias* - gets bias
+- *capa* - sets or writes capa
+- *timemode* - sets or disables timemode. If time mode set exposure time is multplied by clock factor: exp_time * clock_factor

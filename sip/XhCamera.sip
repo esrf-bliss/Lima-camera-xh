@@ -322,7 +322,7 @@ namespace Xh
 
 	void coolDown();
 	void powerDown();
-	void configXh();
+	void configXh(std::string config_name);
 
 	void generateSoftwareTrigger();
 	bool isSoftwareTriggerActive();
