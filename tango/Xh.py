@@ -433,8 +433,6 @@ class XhClass(PyTango.DeviceClass):
         'config_timing_5turn_4bunch',
         'config_timing_5turn_16bunch',
         ]],
-        # "Bunch factor": 
-        # [PyTango.DevFloat, "bunch_factor", ["1"]]
         }
 
     cmd_list = {

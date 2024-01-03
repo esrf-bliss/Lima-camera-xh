@@ -29,8 +29,6 @@ void RoiCtrlObj::setRoi(const Roi& roi)
 	int x = roi.getTopLeft().x;
 	int y = roi.getTopLeft().y;
 
-  std::cout << "ROI SET X: " << x << " w: " << w << std::endl;
-
   Roi real_roi;
   checkRoi(roi, real_roi);
   m_cam.setRoi(real_roi);
@@ -42,6 +40,4 @@ void RoiCtrlObj::getRoi(Roi& roi)
   m_cam.getRoi(roi);
   int w = roi.getSize().getWidth();
 	int x = roi.getTopLeft().x;
-
-  std::cout << "ROI GET X: " << x << " w: " << w << std::endl;
 }

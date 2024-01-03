@@ -377,8 +377,6 @@ namespace lima {
 				string m_configName;
 				string m_sysName;
 				float m_clock_factor;
-				// float m_bunch_factor;
-				// double m_latency_time;
 
 				XhStatus::XhState m_status;
 
