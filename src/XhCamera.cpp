@@ -87,9 +87,6 @@ Camera::Camera(string hostname, int port, string configName, std::vector<std::st
 {
 	DEB_CONSTRUCTOR();
 
-//	DebParams::setModuleFlags(DebParams::AllFlags);
-//	DebParams::setTypeFlags(DebParams::AllFlags);
-//	DebParams::setFormatFlags(DebParams::AllFlags);
 	m_xh_timing_scripts = XH_TIMING_SCRIPT;
 	m_acq_thread = new AcqThread(*this);
 	m_acq_thread->start();
@@ -199,29 +196,27 @@ void Camera::prepareAcq() {
 	DEB_TRACE() << " nb scans  : " << m_nb_scans;
 	DEB_TRACE() << " exp time  : " << m_exp_time;
 	m_acq_frame_nb = 0;
-	// if (m_trigger_mode != IntTrigMult) {
-		if (exposure_time != 0) {
-			if (m_nb_groups == 0) {
-				THROW_HW_ERROR(Error) << "Number of groups must be bigger than 0";
-			}
-			float nb_frames_for_group = float(m_nb_frames_to_collect) / float(m_nb_groups);
-			if (std::floor(nb_frames_for_group) != nb_frames_for_group) {
-				THROW_HW_ERROR(Error) << "Number of frames must be a multiple of number of groups";
-			}
-			for(int i = 0; i < m_nb_groups; i++) {
-				bool last = false;
-				if (i == m_nb_groups - 1) // mark last group with 'last' keyword
-					last = true;
-				
-				setTimingGroup(i, nb_frames_for_group, m_nb_scans, mexptime, last, m_timingParams);
-			}
-		} else {
-			int total_frames;
-			getTotalFrames(total_frames);
-			if (m_nb_frames_to_collect != total_frames)
-				THROW_HW_ERROR(Error) << " Trying to collect a different number of frames than is currently configured ";		
+	if (exposure_time != 0) {
+		if (m_nb_groups == 0) {
+			THROW_HW_ERROR(Error) << "Number of groups must be bigger than 0";
 		}
-	// }
+		float nb_frames_for_group = float(m_nb_frames_to_collect) / float(m_nb_groups);
+		if (std::floor(nb_frames_for_group) != nb_frames_for_group) {
+			THROW_HW_ERROR(Error) << "Number of frames must be a multiple of number of groups";
+		}
+		for(int i = 0; i < m_nb_groups; i++) {
+			bool last = false;
+			if (i == m_nb_groups - 1) // mark last group with 'last' keyword
+				last = true;
+
+			setTimingGroup(i, nb_frames_for_group, m_nb_scans, mexptime, last, m_timingParams);
+		}
+	} else {
+		int total_frames;
+		getTotalFrames(total_frames);
+		if (m_nb_frames_to_collect != total_frames)
+			THROW_HW_ERROR(Error) << " Trying to collect a different number of frames than is currently configured ";
+	}
 }
 
 void Camera::startAcq() {
@@ -231,37 +226,7 @@ void Camera::startAcq() {
 	int mexptime = (int) round(exposure_time); // in cycles
 	if (m_trigger_mode == IntTrigMult) {
 		generateSoftwareTrigger();
-		// if (m_nb_groups == 0) {
-		// 	THROW_HW_ERROR(Error) << "Number of groups must be bigger than 0";
-		// }
-	
-		// float nb_frames_for_group = float(m_nb_frames_to_collect) / float(m_nb_groups);
-		// if (std::floor(nb_frames_for_group) != nb_frames_for_group) {
-		// 	THROW_HW_ERROR(Error) << "Number of frames must be a multiple of number of groups";
-		// }
-
-		// std::cout << "NF FRAMES TO COLLECT: " << nb_frames_for_group <<std::endl;
-		// std::cout << "Already acquired: " << m_acq_frame_nb <<std::endl;
-		// std::cout << "total nb frames to collect: " << m_nb_frames_to_collect << std::endl;
-		// if (m_nb_frames_to_collect % (m_acq_frame_nb + 1) == 0) {
-		// 	int current_group_nb = m_acq_frame_nb % m_nb_groups;
-		// 	std::cout << "Current group: " << current_group_nb <<std::endl;
-		// 	bool last = false;
-		// 	// if (((current_group_nb + 1) * nb_frames_for_group) == m_nb_frames_to_collect)
-		// 			last = true;
-		// 	setTimingGroup(current_group_nb, nb_frames_for_group, m_nb_scans, mexptime, last, m_timingParams);
-		// }
 	}
-		// TODO: make sure its an integer
-		// if (m_nb_frames_to_collect % m_acq_frame_nb == 0) {
-		// for(int i = 0; i < m_nb_groups; i++) {
-		// 	bool last = false;
-		// 	if (i == m_nb_groups - 1) // mark last group with 'last' keyword
-		// 		last = true;
-
-		// 	// In IntTrigMult for each start acq only one frame is acquired
-		// 	setTimingGroup(i, 1, m_nb_scans, mexptime, last, m_timingParams);
-		
 	stringstream cmd;
 	StdBufferCbMgr& buffer_mgr = m_bufferCtrlObj.getBuffer();
 	buffer_mgr.setStartTimestamp(Timestamp::now());
@@ -719,6 +684,7 @@ void Camera::continueAcq() {
 
 /**
  * Set or Clear 16 bit readout mode
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[in] mode false=> 32 bit mode, true => 16 bit mode
  */
@@ -737,6 +703,7 @@ void Camera::set16BitReadout(bool mode) {
 
 /**
  * Set Dead pixels which are ignored in averaging mode.
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[in] first First dead pixel of sequence
  * @param[in] num Number of dead pixels
@@ -753,6 +720,7 @@ void Camera::setDeadPixels(int first, int num, bool reset) {
 
 /**
  * Set offset DACs on inteface card
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[in] first First DAC of sequence
  * @param[in] num Number of DACS in sequence
@@ -769,6 +737,7 @@ void Camera::setOffsets(int first, int num, int value, bool direct) {
 
 /**
  * Set control DAC on HV power supply
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[in] value Value (Volts)
  * @param[in] noslew No slew rate limit during this update
@@ -792,6 +761,7 @@ void Camera::setHvDac(double value, bool noslew, int sign, bool direct){
 
 /**
  * Get ADC value from HV power supply
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[out] value Returned Adc value
  * @param[in] hvmon HV monitor
@@ -821,6 +791,7 @@ void Camera::getHvAdc(double& value, bool hvmon, bool v12, bool v5, int sign, bo
 
 /**
  * Enable/disable HV supply
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[in] enable true = turn on supply, false = switch off
  * @param[in] overtemp Over temperature protection
@@ -914,6 +885,7 @@ void Camera::setHeadDac(double value, HeadVoltageType voltageType, int head, boo
 
 /**
  *	Get ADC value from head
+ * DEPRECATED: Not used, no exposed to tango device
  *
  *	@param[out] value The returned adc value
  *	@param[in] head The head number
@@ -954,6 +926,7 @@ void Camera::getHeadAdc(double& value, int head, HeadVoltageType voltageType) {
 
 /**
  * Set LED enable signal only in Parallel Expander on head
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[in] 0 => LED off, 1 => LED On (appropriate inversion applied in library)
  * @param[in] Specify single head 0 or 1,(default both = -1)
@@ -1166,6 +1139,7 @@ void Camera::setTimingGroup(int groupNum, int nframes, int nscans, int intTime, 
 
 /**
  * Modify timing group setting before writing with last
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[in] group_num The group to modify
  * @param[in] fixed_reset Fixed time from reset negated to S1 asserted
@@ -1186,6 +1160,7 @@ void Camera::modifyTimingGroup(int group_num, int fixed_reset, bool allowExcess,
 }
 
 /**
+ * Not exposed to tango device
  * Setup One external trigger output.
  *
  * @param[in] trigNum Output number 0..7 or -1 for all
@@ -1244,6 +1219,7 @@ void Camera::setExtTrigOutput(int trigNum, TriggerOutputType trigout, int width,
 
 /**
  * Setup LED stretch Time.
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[in] pause_time Waiting for trigger minimum on time in 0.32768 ms cycles
  * @param[in] frame_time Frame change flash time in 0.32768 ms cycles
@@ -1261,6 +1237,7 @@ void Camera::setLedTiming(int pause_time, int frame_time, int int_time, bool wai
 
 /**
  * Get the configured timing data.
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[out] buff A pointer to a the buffer in which the timing data is returned.
  * @param[in] firstParam First parameter number to be output [0...29]
@@ -1286,6 +1263,7 @@ void Camera::getTimingInfo(unsigned int* buff, int firstParam, int nParams, int 
 }
 
 /**
+ * No exposed to tango device.
  * Setting ADC Clock chips for internal or external clock source.
  *
  * @param[in] clockMode selected from {@link #ClockModeType}
@@ -1305,7 +1283,6 @@ void Camera::setupClock(ClockModeType clockMode, int pll_gain, int extra_div, in
 		cmd << " esrf";
 	if (clockMode == XhESRF1136MHz)
 		cmd << " esrf11";
-	m_clock_mode = clockMode;
 	if (stage1)
 		cmd << " stage1";
 	if (nocheck)
@@ -1320,10 +1297,12 @@ void Camera::setupClock(ClockModeType clockMode, int pll_gain, int extra_div, in
 		cmd << " r3 " << r3;
 	if (r4 > 0)
 		cmd << " r4 " << r4;
+	m_clock_mode = clockMode;
 	m_xh->sendWait(cmd.str());
 }
 
 /**
+ * DEPRECATED: Not used, no exposed to tango device
  * Get the current setpoint from one of the 4 head sensors.
  *
  * @param[in] channel 0->3=temperature sensors,
@@ -1356,6 +1335,7 @@ void Camera::getTemperature(std::vector<double> &temperatures) {
 
 /**
  * Set a calibration image using Xchip Vres.
+ * DEPRECATED: Not used, no exposed to tango device
  *
  * @param[in] imageScale The mage scale as %
  */
@@ -1367,6 +1347,7 @@ void Camera::setCalImage(double imageScale) {
 }
 
 /**
+ * DEPRECATED: Not used, no exposed to tango device
  * Set Delay between XCHIP Rst, S1, S2, ShiftIn & XClk and data
  *
  * @param[in] delay The delay value (0..63, -1 => default)
@@ -1379,6 +1360,7 @@ void Camera::setXDelay(int delay) {
 }
 
 /**
+ * DEPRECATED: Not used, no exposed to tango device
  * Sync ADC Clocks
  */
 void Camera::syncClock() {
@@ -1472,6 +1454,20 @@ void Camera::getAvailableTriggerModes(std::vector<std::string> &trigger_list) {
 	DEB_RETURN() << DEB_VAR1(triggers);
 }
 
+/**
+ * Sets custom trigger mode understood by Xh.
+ *
+ * XhTrigIn_noTrigger = 0,
+ * XhTrigIn_groupTrigger = 0x1,
+ * XhTrigIn_frameTrigger = 0x2,
+ * XhTrigIn_scanTrigger = 0x4,
+ * XhTrigIn_groupOrbit = 0x8,
+ * XhTrigIn_frameOrbit = 0x10,
+ * XhTrigIn_scanOrbit = 0x20,
+ * XhTrigIn_fallingTrigger = 0x40,
+ * @param[in] trig_mode return the custom trigger
+*/
+
 void Camera::setCustomTriggerMode(std::string trig_mode) {
 	DEB_MEMBER_FUNCT();
 	bool found = false;
@@ -1489,6 +1485,12 @@ void Camera::setCustomTriggerMode(std::string trig_mode) {
 
 	m_timingParams.trigControl = customTrigger;
 }
+
+/**
+ * Gets custom trigger mode understood by Xh.
+ *
+ * @param[out] trig_mode return the custom trigger
+*/
 
 void Camera::getCustomTriggerMode(std::string& trig_mode) {
 	DEB_MEMBER_FUNCT();
@@ -1849,13 +1851,13 @@ void Camera::getRstFDelay(int& rstFDelay) {
  * @param[out] allowExcess
  */
 
-void Camera::setAllowExcess (bool allowExcess) {
+void Camera::setAllowExcess(bool allowExcess) {
 	DEB_MEMBER_FUNCT();
 
 	m_timingParams.allowExcess  = allowExcess;
 }
 
-void Camera::getAllowExcess (bool& allowExcess) {
+void Camera::getAllowExcess(bool& allowExcess) {
 	DEB_MEMBER_FUNCT();
 	allowExcess  = m_timingParams.allowExcess;
 }
@@ -2079,6 +2081,15 @@ void Camera::checkBin(Bin &binning) {
 	binning = Bin(bin_x, bin_y);
 }
 
+/**
+ * Sets trigger group mode
+ *
+ * @param[in] trig_mode
+ * 0 - no_trigger
+ * 1 - group trigger
+ * 2 - group orbit
+ */
+
 void Camera::setTrigGroupMode(int trig_mode) { 
 	DEB_MEMBER_FUNCT();
 	m_trig_group_mode = trig_mode;
@@ -2098,6 +2109,16 @@ void Camera::getTrigGroupMode(int& trig_mode) {
 	trig_mode = m_trig_group_mode;
 }
 
+
+/**
+ * Sets trigger scan mode
+ *
+ * @param[in] trig_mode
+ * 0 - no_trigger
+ * 1 - scan trigger
+ * 2 - scan orbit
+ */
+
 void Camera::setTrigScanMode(int trig_mode) { 
 	DEB_MEMBER_FUNCT();
 	m_trig_scan_mode = trig_mode;
@@ -2116,6 +2137,15 @@ void Camera::setTrigScanMode(int trig_mode) {
 void Camera::getTrigScanMode(int& trig_mode) { 
 	trig_mode = m_trig_scan_mode;
 }
+
+/**
+ * Sets trigger frame mode
+ *
+ * @param[in] trig_mode
+ * 0 - no_trigger
+ * 1 - frame trigger
+ * 2 - frame orbit
+ */
 
 void Camera::setTrigFrameMode(int trig_mode) {
 	DEB_MEMBER_FUNCT(); 
@@ -2179,15 +2209,32 @@ void Camera::shutDown(string script) {
 	m_xh->sendWait(script);
 }
 
+
+/**
+ * Sends cool down command
+ *
+ */
+
 void Camera::coolDown() {
 	DEB_MEMBER_FUNCT();
 	m_xh->sendWait("~head_powerdown");
 }
 
+/**
+ * Sends power down command
+ *
+ */
+
 void Camera::powerDown() {
 	DEB_MEMBER_FUNCT();
 	m_xh->sendWait("~cooldown_xh");
 }
+
+/**
+ * Sets config name
+ *
+ * @param[in] config_name
+ */
 
 void Camera::configXh(string config_name) {
 	DEB_MEMBER_FUNCT();

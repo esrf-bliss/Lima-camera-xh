@@ -75,8 +75,17 @@ class Xh(PyTango.Device_4Impl):
             'correct_rounding': 'CorrectRounding',
             'group_delay': 'GroupDelay',
             'frame_delay': 'FrameDelay',
+            'frame_time': 'FrameTime',
+            'shift_down': 'ShiftDown',
+            'cycles_start': 'CyclesStart',
+            'cycles_end': 'CyclesEnd',
+            's1_delay': 'S1Delay',
+            's2_delay': 'S2Delay',
+            'xclk_delay': 'XclkDelay',
+            'rstr_delay': 'RstRDelay',
+            'rstf_delay': 'RstFDelay',
+            'allow_excess': 'AllowExcess',
             'scan_period': 'ScanPeriod',
-            'aux_delay': 'AuxDelay',
             'aux_width': 'AuxWidth',
             'nbgroups': 'NbGroups',
             'nbscans': 'NbScans',
@@ -90,6 +99,7 @@ class Xh(PyTango.Device_4Impl):
             'orbit_delay_falling': 'OrbitDelayFalling',
             'orbit_delay_rising': 'OrbitDelayRising',
             'timemode': 'TimeMode',
+            'voltage': 'Voltage',
         }
 			    
         self.init_device()
@@ -267,7 +277,7 @@ class Xh(PyTango.Device_4Impl):
 
     @Core.DEB_MEMBER_FUNCT
     def coolDown(self):
-        return  _XhCam.coolDown()
+        return _XhCam.coolDown()
 
 
 #==================================================================
@@ -278,7 +288,7 @@ class Xh(PyTango.Device_4Impl):
 
     @Core.DEB_MEMBER_FUNCT
     def powerDown(self):
-        return  _XhCam.powerDown()
+        return _XhCam.powerDown()
 
 
 #==================================================================
