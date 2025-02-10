@@ -43,6 +43,9 @@ namespace Xh
 	virtual void stopAcq();
 	virtual void getStatus(HwInterface::StatusType& status /Out/);
 	virtual int  getNbHwAcquiredFrames();
+  private:
+        Interface(const Xh::Interface&);
+
 
   };
 };
