@@ -19,7 +19,7 @@ requirements:
   host:
     - python {{ python }}
     - sip 4.19* # API v12.7
-    - lima-core 1.9.24
+    - lima-core 1.10*
   build:
     - cmake
     - ninja
@@ -27,7 +27,7 @@ requirements:
   run:
     - python
     - {{ pin_compatible('sip', min_pin='x.x.x', max_pin='x') }}
-    - {{ pin_compatible('lima-core', max_pin='x.x') }}
+    - {{ pin_compatible('lima-core', min_pin='x.x', max_pin='x.x') }}
 
 test:
   imports:
